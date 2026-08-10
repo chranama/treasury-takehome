@@ -1,0 +1,23 @@
+# Local research and working artifacts
+tmp/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# JavaScript
+node_modules/
+dist/
+coverage/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
