@@ -47,6 +47,7 @@ const errorTitles: Record<ErrorCategory, string> = {
   live_extraction_disabled: 'Live extraction is unavailable',
   capacity_reached: 'Review capacity is temporarily full',
   traffic_throttled: 'Please wait before trying again',
+  duplicate_submission: 'This review was already submitted',
   provider_timeout: 'The extraction service timed out',
   provider_unavailable: 'The extraction service is unavailable',
   malformed_provider_output: 'The extraction service returned an invalid result',

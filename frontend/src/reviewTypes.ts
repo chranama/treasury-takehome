@@ -16,6 +16,7 @@ export type ErrorCategory =
   | 'live_extraction_disabled'
   | 'capacity_reached'
   | 'traffic_throttled'
+  | 'duplicate_submission'
   | 'provider_timeout'
   | 'provider_unavailable'
   | 'malformed_provider_output'

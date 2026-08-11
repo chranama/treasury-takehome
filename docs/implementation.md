@@ -1,6 +1,6 @@
 # Implementation Approach
 
-**Status:** Accepted architecture; implementation and measurements in progress
+**Status:** P0 implementation and provider evaluation complete; deployment validation pending
 **Last updated:** 2026-08-11
 
 ## Approach
@@ -41,7 +41,7 @@ The browser communicates only with the application origin. It does not call Open
 | Frontend tests | Vitest and Playwright |
 | Deployment | Uvicorn, `launchd`, and a Cloudflare tunnel |
 
-The initial extraction baseline is `gpt-5.6-luna` because it accepts image input, supports structured output, and is intended for cost-sensitive workloads. This is a baseline rather than a claim that the model has already passed the project fixture evaluation. If another model replaces it, that model will be evaluated as one explicit global configuration; the application will not silently escalate individual cases to a more expensive provider configuration.  The prototype will not have a model routing component.
+The evaluated extraction baseline is `gpt-5.6-luna` at `high` image detail on the Standard service tier because it accepts image input, supports structured output, met the synthetic fixture gate, and remained the better latency/cost tradeoff in the Standard-versus-Fast comparison. If another model replaces it, that model will be evaluated as one explicit global configuration; the application will not silently escalate individual cases to a more expensive provider configuration. The prototype does not have a model-routing component.
 
 ## Review lifecycles
 
@@ -51,8 +51,8 @@ P0 uses one synchronous application request:
 
 ```text
 validate input
-  -> reserve provider capacity
   -> prepare image
+  -> reserve provider capacity
   -> extract structured observations
   -> compare deterministically
   -> return result
@@ -84,7 +84,7 @@ The extraction adapter validates that response into Pydantic models. Pure applic
 
 The hosted adapter uses the Responses API structured-output parser to validate directly against the shared Pydantic observation schema. Its stable `label-observations-v2` instructions are sent separately from a user message containing one normalized image as an in-memory data URL. The request uses `gpt-5.6-luna`, `detail: high`, no tools, `reasoning.effort: none`, `store: false`, and a 1,000-token output ceiling. The instructions reserve `not_visible` for absence supported by usable image quality; image degradation that prevents that determination is reported as uncertainty.
 
-Both the provider request and the complete adapter operation are bounded by the 12-second extraction deadline. SDK retries are disabled. The application permits one short retry only for a connection failure or provider 5xx response; it does not automatically retry a timeout or rate-limit response. Provider exceptions are converted to the bounded extraction-error contract without returning provider payloads to the browser.
+Both the provider request and the complete review operation are bounded by the 12-second extraction deadline. The provider adapter and SDK each perform exactly one attempt. The review service permits one short retry only for a connection failure or provider 5xx response, and it obtains a separate durable reservation before that retry. It does not automatically retry a timeout or rate-limit response. Provider exceptions are converted to the bounded extraction-error contract without returning provider payloads to the browser.
 
 Tests can replace the hosted adapter with fixed responses. This keeps domain behavior testable without network access or API spend.
 
@@ -134,7 +134,11 @@ The deployed application bounds spend and request bursts through:
 - fixed model and output limits; and
 - a server-side live-extraction kill switch.
 
-Exact financial budgets and abuse thresholds are deployment configuration rather than public repository values. If live extraction is unavailable because a guard is reached, the application keeps its static interface and clearly identified sample results available; it never presents a stored or fake result as a newly processed review.
+These controls are implemented by a SQLite ledger and a two-slot in-process concurrency guard for the accepted single-Uvicorn-process deployment. Each provider attempt is inserted under an immediate SQLite transaction only after the daily attempt and cumulative reserved-cost checks pass. A successful response replaces its conservative reservation with provider-reported estimated cost; an attempt without usage retains the reservation because it may still have been billed. Startup marks interrupted submissions and reservations as failed while preserving their reserved cost.
+
+The browser supplies a new idempotency key for each explicit review submission. Only its SHA-256 digest is stored. Reuse never creates another provider attempt; because the application deliberately does not retain expected or extracted values, a completed response is not replayed and the duplicate receives a safe conflict response. Source-IP throttling uses only a process-local, secret-salted digest that resets on restart. `CF-Connecting-IP` is trusted only under an explicit deployment setting for a service reachable exclusively through the Cloudflare tunnel.
+
+Exact financial budgets and abuse thresholds are private deployment configuration rather than public repository values, and readiness fails when live extraction is enabled without them. If live extraction is unavailable because a guard is reached, the application keeps its static interface and clearly identified sample results available; it never presents a stored or fake result as a newly processed review.
 
 The application records provider-reported token usage, latency, and estimated cost without logging uploaded content. Model and image-detail choices are evaluated on representative fixtures using correctness, uncertainty behavior, latency, and cost together. Provisional estimates are not reported as observed results.
 
@@ -155,7 +159,7 @@ A paired follow-up compared 40 Standard and 40 [Fast-mode](https://developers.op
 
 The versioned live fixture manifest defines four deterministic synthetic cases: a clear matching label, a net-contents mismatch, an altered Government Warning, and an unreadable label. The fixture artwork is generated locally from that manifest, and the evidence report records the manifest hash and prompt revision so a later result is attributable to one configuration. The explicitly invoked `evals.live` and `evals.tier_benchmark` commands are the only documented evaluation paths that intentionally incur provider charges. The initial run uses `high` image detail; `original` is an explicit follow-up configuration only if warning transcription at `high` does not meet the gate.
 
-Raw evaluation evidence remains local and gitignored because it contains diagnostic observations and provider request identifiers. Hosted extraction remains unavailable through the public application until the Milestone 7 usage reservations and operational safeguards are active.
+Raw evaluation evidence remains local and gitignored because it contains diagnostic observations and provider request identifiers. Hosted extraction remains disabled by default and cannot become ready until the API key and all private usage-control settings are present.
 
 A deployed smoke test will complete the P0 happy path in a current desktop browser and verify that browser runtime requests do not depend on third-party asset, model, storage, analytics, telemetry, or authentication domains.
 

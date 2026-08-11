@@ -16,11 +16,12 @@ from app.api.system import router as system_router
 from app.config import Settings, get_settings
 from app.db import initialize_database
 from app.extraction import (
+    PROMPT_REVISION,
     ExtractionAdapter,
     OpenAIExtractionAdapter,
     create_extraction_adapter,
 )
-from app.reviews import AttemptGate, NoCostFakeAttemptGate, ReviewService
+from app.reviews import AttemptGate, NoCostFakeAttemptGate, ReviewService, SQLiteUsageGate
 from app.storage.images import DEFAULT_IMAGE_LIMITS
 
 
@@ -43,11 +44,32 @@ def create_app(
             resolved_adapter = created_adapter
             if isinstance(created_adapter, OpenAIExtractionAdapter):
                 owned_openai_adapter = created_adapter
+        if resolved_attempt_gate is None:
+            assert resolved_settings.live_daily_attempt_limit is not None
+            assert resolved_settings.live_cumulative_cost_limit_usd is not None
+            assert resolved_settings.live_attempt_reservation_usd is not None
+            assert resolved_settings.live_source_window_seconds is not None
+            assert resolved_settings.live_source_max_submissions is not None
+            resolved_attempt_gate = SQLiteUsageGate(
+                database_path=resolved_settings.database_path,
+                daily_attempt_limit=resolved_settings.live_daily_attempt_limit,
+                cumulative_cost_limit_usd=resolved_settings.live_cumulative_cost_limit_usd,
+                attempt_reservation_usd=resolved_settings.live_attempt_reservation_usd,
+                source_window_seconds=resolved_settings.live_source_window_seconds,
+                source_max_submissions=resolved_settings.live_source_max_submissions,
+                model=resolved_settings.openai_model,
+                prompt_revision=PROMPT_REVISION,
+                image_detail=resolved_settings.openai_image_detail,
+                service_tier=resolved_settings.openai_service_tier,
+                max_attempts_per_submission=resolved_settings.openai_transient_retries + 1,
+            )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         resolved_settings.prepare_local_directories()
         initialize_database(resolved_settings.database_path)
+        if isinstance(resolved_attempt_gate, SQLiteUsageGate):
+            await resolved_attempt_gate.reconcile_incomplete()
         try:
             yield
         finally:

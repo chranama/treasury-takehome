@@ -50,7 +50,6 @@ def test_factory_builds_openai_adapter_without_sdk_retries() -> None:
     assert adapter.image_detail == "high"
     assert adapter.service_tier == "default"
     assert adapter.max_output_tokens == 1_000
-    assert adapter.transient_retries == 1
     assert adapter.client.max_retries == 0
     asyncio.run(adapter.client.close())
 

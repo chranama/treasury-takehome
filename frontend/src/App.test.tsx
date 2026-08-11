@@ -129,7 +129,8 @@ describe('App', () => {
   })
 
   it('shows all five checks and synthetic mode for a successful review', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(makeResult())))
+    const fetchMock = vi.fn(async () => jsonResponse(makeResult()))
+    vi.stubGlobal('fetch', fetchMock)
     render(<App />)
     fillValidForm()
 
@@ -143,6 +144,16 @@ describe('App', () => {
     expect(within(checks).getByRole('heading', { name: 'Government Warning' })).toBeInTheDocument()
     expect(screen.getByText('1.25 seconds')).toBeInTheDocument()
     expect(screen.getByText('Reference: review-123')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/reviews',
+      expect.objectContaining({
+        headers: {
+          'Idempotency-Key': expect.stringMatching(
+            /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+          ),
+        },
+      }),
+    )
   })
 
   it('shows a Needs review outcome and the mismatch reason', async () => {
@@ -171,6 +182,7 @@ describe('App', () => {
   it.each([
     ['traffic_throttled', 'Please wait before trying again', 429],
     ['capacity_reached', 'Review capacity is temporarily full', 503],
+    ['duplicate_submission', 'This review was already submitted', 409],
     ['internal_error', 'The application encountered an error', 500],
   ] as const)('explains the %s failure category in plain language', async (category, title, status) => {
     vi.stubGlobal(

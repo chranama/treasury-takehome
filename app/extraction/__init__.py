@@ -5,6 +5,8 @@ from app.extraction.contract import (
     ExtractionError,
     ExtractionErrorKind,
     ImageMediaType,
+    MeteredExtractionAdapter,
+    MeteredExtractionResult,
     PreparedImage,
 )
 from app.extraction.factory import ExtractionConfigurationError, create_extraction_adapter
@@ -16,6 +18,7 @@ from app.extraction.openai_adapter import (
     OpenAIExtractionResult,
     OpenAIUsage,
 )
+from app.extraction.pricing import estimated_cost_usd
 
 __all__ = [
     "ExtractionAdapter",
@@ -26,6 +29,8 @@ __all__ = [
     "FakeExtractionFailure",
     "FakeExtractionScenario",
     "ImageMediaType",
+    "MeteredExtractionAdapter",
+    "MeteredExtractionResult",
     "OpenAIExtractionAdapter",
     "OpenAIExtractionResult",
     "OpenAIUsage",
@@ -33,4 +38,5 @@ __all__ = [
     "EXTRACTION_INSTRUCTIONS",
     "PreparedImage",
     "create_extraction_adapter",
+    "estimated_cost_usd",
 ]

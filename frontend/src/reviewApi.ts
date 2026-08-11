@@ -31,6 +31,7 @@ const errorCategories = new Set<ErrorCategory>([
   'live_extraction_disabled',
   'capacity_reached',
   'traffic_throttled',
+  'duplicate_submission',
   'provider_timeout',
   'provider_unavailable',
   'malformed_provider_output',
@@ -123,6 +124,7 @@ export async function submitReview(submission: ReviewSubmission): Promise<Review
   try {
     response = await fetch('/api/reviews', {
       method: 'POST',
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
       body: formData,
     })
   } catch {

@@ -1,9 +1,10 @@
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi import APIRouter, File, Form, Header, Request, UploadFile
 from pydantic import ConfigDict, ValidationError
 
+from app.api.client_identity import source_identity
 from app.api.correlation import correlation_id_from_scope
 from app.api.errors import ApiErrorResponse, ReviewApiError
 from app.comparison import (
@@ -30,6 +31,7 @@ class ReviewResponse(ReviewResult):
     response_model=ReviewResponse,
     responses={
         413: {"model": ApiErrorResponse},
+        409: {"model": ApiErrorResponse},
         422: {"model": ApiErrorResponse},
         429: {"model": ApiErrorResponse},
         500: {"model": ApiErrorResponse},
@@ -46,6 +48,7 @@ async def review_label(
     expected_net_contents: Annotated[Decimal, Form(gt=0)],
     expected_net_contents_unit: Annotated[NetContentsUnit, Form()],
     image: Annotated[list[UploadFile], File()],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=16, max_length=128)],
 ) -> ReviewResponse:
     if len(image) != 1:
         for upload in image:
@@ -78,6 +81,8 @@ async def review_label(
         expected=expected,
         upload=image[0],
         correlation_id=correlation_id,
+        idempotency_key=idempotency_key,
+        source_identity=source_identity(request, request.app.state.settings),
     )
     return ReviewResponse(
         **processed.review.model_dump(),

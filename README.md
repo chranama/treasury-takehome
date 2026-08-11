@@ -4,7 +4,7 @@ A standalone proof of concept that helps an alcohol-label reviewer compare expec
 
 ## Project status
 
-The P0 single-review workflow is implemented end to end with a deterministic development adapter. The hosted OpenAI extraction adapter and an explicit live-evaluation harness are also implemented. Public live extraction remains disabled until the usage ledger, concurrency controls, idempotency, and deployment safeguards are complete.
+The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. Public live extraction remains disabled by default while deployment work is completed.
 
 ## Demo workflow
 

@@ -5,10 +5,12 @@ import json
 import math
 import subprocess
 import tempfile
+from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from statistics import median
+from time import perf_counter
 
 from app.comparison import CheckStatus, ReviewResult, compare_review
 from app.config import PROJECT_ROOT, Settings
@@ -18,18 +20,21 @@ from app.extraction import (
     ExtractionErrorKind,
     OpenAIExtractionAdapter,
     OpenAIExtractionResult,
-    OpenAIUsage,
+    PreparedImage,
     create_extraction_adapter,
+    estimated_cost_usd,
+)
+from app.extraction.pricing import (
+    LUNA_CACHED_INPUT_USD_PER_MILLION,
+    LUNA_FAST_RATE_MULTIPLIER,
+    LUNA_INPUT_USD_PER_MILLION,
+    LUNA_OUTPUT_USD_PER_MILLION,
+    PRICING_CHECKED_AT,
+    PRICING_SOURCE,
 )
 from evals.fixtures import EvaluationCase, load_manifest, render_fixture
 
 DEFAULT_MANIFEST = PROJECT_ROOT / "fixtures" / "live-evaluation-v1.json"
-PRICING_CHECKED_AT = "2026-08-11"
-PRICING_SOURCE = "https://developers.openai.com/api/docs/pricing"
-LUNA_INPUT_USD_PER_MILLION = Decimal("0.20")
-LUNA_CACHED_INPUT_USD_PER_MILLION = Decimal("0.02")
-LUNA_OUTPUT_USD_PER_MILLION = Decimal("1.20")
-LUNA_FAST_RATE_MULTIPLIER = Decimal("2")
 
 
 def _run_git(*args: str) -> str:
@@ -52,36 +57,31 @@ def source_state() -> dict[str, object]:
     return {"git_commit": commit, "dirty": dirty}
 
 
-def estimated_cost_usd(
-    model: str,
-    usage: OpenAIUsage | None,
-    service_tier: str = "default",
-) -> Decimal | None:
-    if (
-        model != "gpt-5.6-luna"
-        or usage is None
-        or service_tier
-        not in {
-            "default",
-            "fast",
-            "priority",
-        }
-    ):
-        return None
-    rate_multiplier = (
-        LUNA_FAST_RATE_MULTIPLIER if service_tier in {"fast", "priority"} else Decimal(1)
-    )
-    uncached_tokens = max(0, usage.input_tokens - usage.cached_input_tokens)
-    denominator = Decimal(1_000_000)
-    cost = (
-        Decimal(uncached_tokens) / denominator * LUNA_INPUT_USD_PER_MILLION * rate_multiplier
-        + Decimal(usage.cached_input_tokens)
-        / denominator
-        * LUNA_CACHED_INPUT_USD_PER_MILLION
-        * rate_multiplier
-        + Decimal(usage.output_tokens) / denominator * LUNA_OUTPUT_USD_PER_MILLION * rate_multiplier
-    )
-    return cost.quantize(Decimal("0.00000001"))
+async def extract_with_retries(
+    adapter: OpenAIExtractionAdapter,
+    image: PreparedImage,
+    transient_retries: int,
+) -> OpenAIExtractionResult:
+    try:
+        async with asyncio.timeout(adapter.timeout_seconds):
+            started_at = perf_counter()
+            for attempt_count in range(1, transient_retries + 2):
+                try:
+                    result = await adapter.extract_with_metadata(image)
+                except ExtractionError as error:
+                    if error.retryable and attempt_count <= transient_retries:
+                        await asyncio.sleep(0.25)
+                        continue
+                    raise
+                latency_ms = max(0, int((perf_counter() - started_at) * 1_000))
+                return replace(result, attempt_count=attempt_count, latency_ms=latency_ms)
+    except TimeoutError as error:
+        raise ExtractionError(
+            kind=ExtractionErrorKind.TIMEOUT,
+            safe_message="Label extraction timed out.",
+            retryable=False,
+        ) from error
+    raise RuntimeError("unreachable retry state")
 
 
 def _check_statuses(result: ReviewResult) -> dict[str, str]:
@@ -232,7 +232,11 @@ async def run_evaluation(
             for case in manifest.cases:
                 prepared = render_fixture(case, directory / f"{case.id}.png")
                 try:
-                    extraction = await adapter.extract_with_metadata(prepared)
+                    extraction = await extract_with_retries(
+                        adapter,
+                        prepared,
+                        settings.openai_transient_retries,
+                    )
                 except ExtractionError as error:
                     records.append(evaluate_failure(case, error, adapter.service_tier))
                 else:
@@ -308,7 +312,7 @@ def main() -> None:
         **({"openai_image_detail": args.image_detail} if args.image_detail else {}),
         **({"openai_service_tier": args.service_tier} if args.service_tier else {}),
     )
-    issues = configured.configuration_issues()
+    issues = configured.provider_configuration_issues()
     if issues:
         raise SystemExit("Live evaluation configuration is incomplete: " + "; ".join(issues))
     report = asyncio.run(

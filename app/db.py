@@ -20,11 +20,62 @@ def initialize_database(database_path: Path) -> None:
             )
             """
         )
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS review_submissions (
+                idempotency_hash TEXT PRIMARY KEY,
+                correlation_id TEXT NOT NULL UNIQUE,
+                status TEXT NOT NULL CHECK (status IN ('processing', 'completed', 'failed')),
+                created_at TEXT NOT NULL,
+                completed_at TEXT,
+                outcome TEXT,
+                match_count INTEGER CHECK (match_count IS NULL OR match_count >= 0),
+                mismatch_count INTEGER CHECK (mismatch_count IS NULL OR mismatch_count >= 0),
+                needs_review_count INTEGER CHECK (
+                    needs_review_count IS NULL OR needs_review_count >= 0
+                ),
+                error_kind TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS provider_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                correlation_id TEXT NOT NULL,
+                attempt_number INTEGER NOT NULL CHECK (attempt_number > 0),
+                status TEXT NOT NULL CHECK (status IN ('reserved', 'succeeded', 'failed')),
+                reserved_at TEXT NOT NULL,
+                settled_at TEXT,
+                reserved_cost_units INTEGER NOT NULL CHECK (reserved_cost_units > 0),
+                actual_cost_units INTEGER CHECK (
+                    actual_cost_units IS NULL OR actual_cost_units >= 0
+                ),
+                provider_request_id TEXT,
+                model TEXT NOT NULL,
+                prompt_revision TEXT NOT NULL,
+                image_detail TEXT NOT NULL,
+                requested_service_tier TEXT NOT NULL,
+                response_service_tier TEXT,
+                latency_ms INTEGER CHECK (latency_ms IS NULL OR latency_ms >= 0),
+                input_tokens INTEGER CHECK (input_tokens IS NULL OR input_tokens >= 0),
+                cached_input_tokens INTEGER CHECK (
+                    cached_input_tokens IS NULL OR cached_input_tokens >= 0
+                ),
+                output_tokens INTEGER CHECK (output_tokens IS NULL OR output_tokens >= 0),
+                reasoning_tokens INTEGER CHECK (reasoning_tokens IS NULL OR reasoning_tokens >= 0),
+                total_tokens INTEGER CHECK (total_tokens IS NULL OR total_tokens >= 0),
+                error_kind TEXT,
+                FOREIGN KEY (correlation_id) REFERENCES review_submissions(correlation_id),
+                UNIQUE (correlation_id, attempt_number)
+            );
+
+            CREATE INDEX IF NOT EXISTS provider_attempts_reserved_at_idx
+                ON provider_attempts (reserved_at);
+            """
+        )
         connection.execute(
             """
             INSERT INTO app_metadata (key, value)
-            VALUES ('schema_version', '0')
-            ON CONFLICT(key) DO NOTHING
+            VALUES ('schema_version', '1')
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
             """
         )
 

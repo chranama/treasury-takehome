@@ -63,3 +63,28 @@ class ExtractionAdapter(Protocol):
     """Extract visible label observations without access to expected values."""
 
     async def extract(self, image: PreparedImage) -> ExtractionObservations: ...
+
+
+class ExtractionUsageMetadata(Protocol):
+    input_tokens: int
+    cached_input_tokens: int
+    output_tokens: int
+    reasoning_tokens: int
+    total_tokens: int
+
+
+class MeteredExtractionResult(Protocol):
+    observations: ExtractionObservations
+    provider_request_id: str
+    model: str
+    prompt_revision: str
+    image_detail: str
+    requested_service_tier: str
+    response_service_tier: str | None
+    latency_ms: int
+    usage: ExtractionUsageMetadata | None
+
+
+@runtime_checkable
+class MeteredExtractionAdapter(Protocol):
+    async def extract_with_metadata(self, image: PreparedImage) -> MeteredExtractionResult: ...

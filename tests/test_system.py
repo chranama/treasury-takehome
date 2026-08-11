@@ -77,6 +77,43 @@ def test_disabled_live_extraction_keeps_static_application_ready(tmp_path: Path)
     assert response.json()["status"] == "ready"
 
 
+def test_live_extraction_requires_all_private_usage_controls(tmp_path: Path) -> None:
+    settings = make_settings(
+        tmp_path,
+        extraction_backend="openai",
+        live_extraction_enabled=True,
+        openai_api_key="test-key",
+    )
+
+    with TestClient(create_app(settings)) as client:
+        response = client.get("/readyz")
+
+    assert response.status_code == 503
+    assert response.json()["checks"]["configuration"] == "not_ready"
+    issues = settings.configuration_issues()
+    assert "live extraction requires a daily attempt limit" in issues
+    assert "live extraction requires a cumulative cost limit" in issues
+
+
+def test_attempt_reservation_cannot_exceed_cumulative_limit(tmp_path: Path) -> None:
+    settings = make_settings(
+        tmp_path,
+        extraction_backend="openai",
+        live_extraction_enabled=True,
+        openai_api_key="test-key",
+        live_daily_attempt_limit=10,
+        live_cumulative_cost_limit_usd="0.01",
+        live_attempt_reservation_usd="0.02",
+        live_source_window_seconds=60,
+        live_source_max_submissions=5,
+    )
+
+    assert (
+        "attempt cost reservation cannot exceed the cumulative cost limit"
+        in settings.configuration_issues()
+    )
+
+
 def test_application_closes_factory_owned_openai_client(
     tmp_path: Path,
     monkeypatch,
@@ -90,6 +127,11 @@ def test_application_closes_factory_owned_openai_client(
         extraction_backend="openai",
         live_extraction_enabled=True,
         openai_api_key="test-key",
+        live_daily_attempt_limit=10,
+        live_cumulative_cost_limit_usd="1",
+        live_attempt_reservation_usd="0.01",
+        live_source_window_seconds=60,
+        live_source_max_submissions=5,
     )
 
     with TestClient(create_app(settings)) as test_client:

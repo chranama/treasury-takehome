@@ -23,6 +23,7 @@ _STATUS_BY_CATEGORY: dict[ApplicationErrorCategory, int] = {
     ApplicationErrorCategory.LIVE_EXTRACTION_DISABLED: 503,
     ApplicationErrorCategory.CAPACITY_REACHED: 503,
     ApplicationErrorCategory.TRAFFIC_THROTTLED: 429,
+    ApplicationErrorCategory.DUPLICATE_SUBMISSION: 409,
     ApplicationErrorCategory.PROVIDER_TIMEOUT: 504,
     ApplicationErrorCategory.PROVIDER_UNAVAILABLE: 502,
     ApplicationErrorCategory.MALFORMED_PROVIDER_OUTPUT: 502,

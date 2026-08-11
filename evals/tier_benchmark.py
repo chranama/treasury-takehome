@@ -26,6 +26,7 @@ from evals.live import (
     PRICING_SOURCE,
     evaluate_failure,
     evaluate_success,
+    extract_with_retries,
     source_state,
     summarize,
 )
@@ -131,8 +132,10 @@ async def run_benchmark(
                     for tier in order:
                         adapter = adapters[tier]
                         try:
-                            extraction = await adapter.extract_with_metadata(
-                                prepared_images[case.id]
+                            extraction = await extract_with_retries(
+                                adapter,
+                                prepared_images[case.id],
+                                settings.openai_transient_retries,
                             )
                         except ExtractionError as error:
                             record = evaluate_failure(case, error, tier)
@@ -216,7 +219,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     configured = Settings(extraction_backend="openai", live_extraction_enabled=True)
-    issues = configured.configuration_issues()
+    issues = configured.provider_configuration_issues()
     if issues:
         raise SystemExit("Tier benchmark configuration is incomplete: " + "; ".join(issues))
     report = asyncio.run(

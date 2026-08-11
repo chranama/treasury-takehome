@@ -38,5 +38,4 @@ def create_extraction_adapter(settings: Settings) -> ExtractionAdapter:
         service_tier=settings.openai_service_tier,
         max_output_tokens=settings.openai_max_output_tokens,
         timeout_seconds=settings.extraction_timeout_seconds,
-        transient_retries=settings.openai_transient_retries,
     )

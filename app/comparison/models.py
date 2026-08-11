@@ -59,6 +59,7 @@ class ApplicationErrorCategory(StrEnum):
     LIVE_EXTRACTION_DISABLED = "live_extraction_disabled"
     CAPACITY_REACHED = "capacity_reached"
     TRAFFIC_THROTTLED = "traffic_throttled"
+    DUPLICATE_SUBMISSION = "duplicate_submission"
     PROVIDER_TIMEOUT = "provider_timeout"
     PROVIDER_UNAVAILABLE = "provider_unavailable"
     MALFORMED_PROVIDER_OUTPUT = "malformed_provider_output"

@@ -1,10 +1,11 @@
 import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,10 +19,15 @@ from app.comparison import (
     OverallOutcome,
 )
 from app.config import Settings
+from app.db import connect
 from app.extraction import (
+    ExtractionError,
+    ExtractionErrorKind,
     FakeExtractionAdapter,
     FakeExtractionFailure,
     FakeExtractionScenario,
+    OpenAIExtractionResult,
+    OpenAIUsage,
     PreparedImage,
 )
 from app.main import create_app
@@ -136,18 +142,79 @@ class ExtractionFailureAdapter:
         return await self.delegate.extract(image)
 
 
+class MeteredSequenceAdapter:
+    def __init__(self, *, fail_first: bool = False) -> None:
+        self.fail_first = fail_first
+        self.calls = 0
+
+    async def extract_with_metadata(self, image: PreparedImage) -> OpenAIExtractionResult:
+        self.calls += 1
+        if self.fail_first and self.calls == 1:
+            raise ExtractionError(
+                kind=ExtractionErrorKind.TRANSIENT_FAILURE,
+                safe_message="temporary provider failure",
+                retryable=True,
+            )
+        observations = await FakeExtractionAdapter().extract(image)
+        return OpenAIExtractionResult(
+            observations=observations,
+            provider_request_id=f"resp_{self.calls}",
+            model="gpt-5.6-luna",
+            prompt_revision="label-observations-v2",
+            image_detail="high",
+            requested_service_tier="default",
+            response_service_tier="default",
+            attempt_count=1,
+            latency_ms=100,
+            usage=OpenAIUsage(
+                input_tokens=3020,
+                cached_input_tokens=3017,
+                output_tokens=240,
+                reasoning_tokens=0,
+                total_tokens=3260,
+            ),
+        )
+
+
 class RecordingGate:
     def __init__(self) -> None:
         self.correlation_ids: list[str] = []
         self.exits = 0
 
     @asynccontextmanager
-    async def reserve(self, correlation_id: str) -> AsyncGenerator[None, None]:
+    async def submission(
+        self,
+        *,
+        correlation_id: str,
+        idempotency_key: str,
+        source_identity: str,
+    ) -> AsyncGenerator["RecordingSubmission", None]:
+        del idempotency_key, source_identity
         self.correlation_ids.append(correlation_id)
         try:
-            yield
+            yield RecordingSubmission()
         finally:
             self.exits += 1
+
+
+class RecordingReservation:
+    async def settle_success(self, success=None) -> None:
+        del success
+
+    async def settle_failure(self, error_kind: str) -> None:
+        del error_kind
+
+
+class RecordingSubmission:
+    @asynccontextmanager
+    async def reserve_attempt(self) -> AsyncGenerator[RecordingReservation, None]:
+        yield RecordingReservation()
+
+    async def complete(self, **_: object) -> None:
+        return None
+
+    async def fail(self, error_kind: str) -> None:
+        del error_kind
 
 
 class RejectingGate:
@@ -156,11 +223,32 @@ class RejectingGate:
         self.calls = 0
 
     @asynccontextmanager
-    async def reserve(self, correlation_id: str) -> AsyncGenerator[None, None]:
-        del correlation_id
+    async def submission(
+        self,
+        *,
+        correlation_id: str,
+        idempotency_key: str,
+        source_identity: str,
+    ) -> AsyncGenerator[RecordingSubmission, None]:
+        del correlation_id, idempotency_key, source_identity
         self.calls += 1
         raise AttemptRejected(self.kind)
         yield
+
+
+def post_review(
+    client: TestClient,
+    *,
+    data: dict[str, str] | None = None,
+    files: list[tuple[str, tuple[str, bytes, str]]] | None = None,
+    idempotency_key: str | None = None,
+):
+    return client.post(
+        "/api/reviews",
+        data=data,
+        files=files,
+        headers={"Idempotency-Key": idempotency_key or str(uuid4())},
+    )
 
 
 def assert_error_contract(response: Any, expected_category: str) -> dict[str, object]:
@@ -212,8 +300,8 @@ def test_complete_review_request_uses_fake_adapter_and_stable_response(
     )
 
     with TestClient(app) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(),
             files=[image_file()],
         )
@@ -254,8 +342,8 @@ def test_invalid_expected_fields_return_safe_validation_error_without_extraction
     app = create_app(make_settings(tmp_path), extraction_adapter=adapter)
 
     with TestClient(app) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(**form_overrides),
             files=[image_file()],
         )
@@ -273,8 +361,8 @@ def test_exactly_one_image_is_required(tmp_path: Path) -> None:
     app = create_app(make_settings(tmp_path), extraction_adapter=adapter)
 
     with TestClient(app) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(),
             files=[image_file(filename="one.png"), image_file(filename="two.png")],
         )
@@ -287,6 +375,22 @@ def test_exactly_one_image_is_required(tmp_path: Path) -> None:
     assert "two.png" not in response.text
 
 
+def test_idempotency_key_is_required_before_extraction(tmp_path: Path) -> None:
+    adapter = RecordingAdapter()
+    app = create_app(make_settings(tmp_path), extraction_adapter=adapter)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/reviews",
+            data=review_form(),
+            files=[image_file()],
+        )
+
+    assert response.status_code == 422
+    assert_error_contract(response, "invalid_input")
+    assert adapter.calls == 0
+
+
 def test_invalid_image_is_rejected_before_attempt_reservation(tmp_path: Path) -> None:
     adapter = RecordingAdapter()
     gate = RecordingGate()
@@ -297,8 +401,8 @@ def test_invalid_image_is_rejected_before_attempt_reservation(tmp_path: Path) ->
     )
 
     with TestClient(app) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(),
             files=[image_file(b"\x89PNG\r\n\x1a\nprivate-corrupt-content")],
         )
@@ -317,6 +421,7 @@ def test_invalid_image_is_rejected_before_attempt_reservation(tmp_path: Path) ->
     [
         (AttemptRejectionKind.CAPACITY_REACHED, 503, "capacity_reached"),
         (AttemptRejectionKind.TRAFFIC_THROTTLED, 429, "traffic_throttled"),
+        (AttemptRejectionKind.DUPLICATE_SUBMISSION, 409, "duplicate_submission"),
     ],
 )
 def test_attempt_gate_rejections_are_distinct_and_do_not_invoke_extraction(
@@ -334,8 +439,8 @@ def test_attempt_gate_rejections_are_distinct_and_do_not_invoke_extraction(
     )
 
     with TestClient(app) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(),
             files=[image_file()],
         )
@@ -380,8 +485,8 @@ def test_unavailable_modes_never_run_the_adapter(
     )
 
     with TestClient(app) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(),
             files=[image_file()],
         )
@@ -405,8 +510,8 @@ def test_live_adapter_requires_an_explicit_attempt_gate(tmp_path: Path) -> None:
     app = create_app(settings, extraction_adapter=adapter)
 
     with TestClient(app) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(),
             files=[image_file()],
         )
@@ -426,8 +531,8 @@ def test_openai_configuration_never_falls_back_to_fake_adapter(tmp_path: Path) -
     app = create_app(settings)
 
     with TestClient(app) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(),
             files=[image_file()],
         )
@@ -443,8 +548,8 @@ def test_timeout_is_bounded_and_cleans_the_prepared_image(tmp_path: Path) -> Non
     app = create_app(settings, extraction_adapter=adapter)
 
     with TestClient(app) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(),
             files=[image_file()],
         )
@@ -482,8 +587,8 @@ def test_bounded_extraction_errors_map_to_safe_api_errors_without_retry(
     )
 
     with TestClient(app) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(),
             files=[image_file()],
         )
@@ -501,8 +606,8 @@ def test_malformed_adapter_return_is_not_exposed(tmp_path: Path) -> None:
     app = create_app(make_settings(tmp_path), extraction_adapter=adapter)
 
     with TestClient(app) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(),
             files=[image_file()],
         )
@@ -520,8 +625,8 @@ def test_unexpected_adapter_exception_returns_safe_internal_error(tmp_path: Path
     app = create_app(make_settings(tmp_path), extraction_adapter=adapter)
 
     with TestClient(app, raise_server_exceptions=False) as client:
-        response = client.post(
-            "/api/reviews",
+        response = post_review(
+            client,
             data=review_form(),
             files=[image_file(filename="secret-application.png")],
         )
@@ -534,3 +639,80 @@ def test_unexpected_adapter_exception_returns_safe_internal_error(tmp_path: Path
     assert adapter.calls == 1
     assert adapter.prepared_path is not None
     assert not adapter.prepared_path.exists()
+
+
+def live_settings(tmp_path: Path, **overrides: object) -> Settings:
+    values: dict[str, object] = {
+        "extraction_backend": "openai",
+        "live_extraction_enabled": True,
+        "openai_api_key": "test-key",
+        "openai_transient_retries": 1,
+        "live_daily_attempt_limit": 10,
+        "live_cumulative_cost_limit_usd": Decimal("1"),
+        "live_attempt_reservation_usd": Decimal("0.01"),
+        "live_source_window_seconds": 60,
+        "live_source_max_submissions": 10,
+    }
+    values.update(overrides)
+    return make_settings(tmp_path, **values)
+
+
+def test_live_duplicate_idempotency_key_never_creates_second_provider_attempt(
+    tmp_path: Path,
+) -> None:
+    adapter = MeteredSequenceAdapter()
+    settings = live_settings(tmp_path)
+    app = create_app(settings, extraction_adapter=adapter)
+    idempotency_key = "550e8400-e29b-41d4-a716-446655440000"
+
+    with TestClient(app) as client:
+        first = post_review(
+            client,
+            data=review_form(),
+            files=[image_file()],
+            idempotency_key=idempotency_key,
+        )
+        duplicate = post_review(
+            client,
+            data=review_form(),
+            files=[image_file()],
+            idempotency_key=idempotency_key,
+        )
+
+    assert first.status_code == 200
+    assert duplicate.status_code == 409
+    assert_error_contract(duplicate, "duplicate_submission")
+    assert adapter.calls == 1
+    with connect(settings.database_path) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM provider_attempts").fetchone() == (1,)
+    database_bytes = settings.database_path.read_bytes()
+    assert idempotency_key.encode("ascii") not in database_bytes
+    assert b"Treasury Reserve" not in database_bytes
+    assert b"GOVERNMENT WARNING" not in database_bytes
+
+
+def test_live_retry_receives_a_second_durable_reservation(tmp_path: Path) -> None:
+    adapter = MeteredSequenceAdapter(fail_first=True)
+    settings = live_settings(tmp_path)
+    app = create_app(settings, extraction_adapter=adapter)
+
+    with TestClient(app) as client:
+        response = post_review(
+            client,
+            data=review_form(),
+            files=[image_file()],
+        )
+
+    assert response.status_code == 200
+    assert adapter.calls == 2
+    with connect(settings.database_path) as connection:
+        attempts = connection.execute(
+            """
+            SELECT attempt_number, status, error_kind, provider_request_id
+            FROM provider_attempts ORDER BY attempt_number
+            """
+        ).fetchall()
+    assert attempts == [
+        (1, "failed", "transient_failure", None),
+        (2, "succeeded", None, "resp_2"),
+    ]

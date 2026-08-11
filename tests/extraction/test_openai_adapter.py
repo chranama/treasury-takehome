@@ -83,8 +83,6 @@ def adapter_with_parse(parse: AsyncMock, **overrides: object) -> OpenAIExtractio
         "service_tier": "default",
         "max_output_tokens": 1_000,
         "timeout_seconds": 12.0,
-        "transient_retries": 1,
-        "retry_delay_seconds": 0.0,
         **overrides,
     }
     return OpenAIExtractionAdapter(**values)  # type: ignore[arg-type]
@@ -158,37 +156,33 @@ def test_extract_returns_only_observations(prepared_image: PreparedImage) -> Non
     assert isinstance(extracted, ExtractionObservations)
 
 
-def test_retries_one_connection_failure(prepared_image: PreparedImage) -> None:
+def test_connection_failure_is_retryable_but_not_retried(prepared_image: PreparedImage) -> None:
     request = httpx.Request("POST", "https://api.openai.com/v1/responses")
-    parse = AsyncMock(
-        side_effect=[
-            APIConnectionError(message="connection reset", request=request),
-            response(),
-        ]
-    )
+    parse = AsyncMock(side_effect=APIConnectionError(message="connection reset", request=request))
     adapter = adapter_with_parse(parse)
 
-    extracted = asyncio.run(adapter.extract_with_metadata(prepared_image))
+    with pytest.raises(ExtractionError) as captured:
+        asyncio.run(adapter.extract_with_metadata(prepared_image))
 
-    assert extracted.attempt_count == 2
-    assert parse.await_count == 2
+    assert captured.value.kind == ExtractionErrorKind.TRANSIENT_FAILURE
+    assert captured.value.retryable is True
+    assert parse.await_count == 1
 
 
-def test_retries_one_provider_server_failure(prepared_image: PreparedImage) -> None:
+def test_server_failure_is_retryable_but_not_retried(prepared_image: PreparedImage) -> None:
     request = httpx.Request("POST", "https://api.openai.com/v1/responses")
     response_500 = httpx.Response(500, request=request)
     parse = AsyncMock(
-        side_effect=[
-            InternalServerError("provider unavailable", response=response_500, body=None),
-            response(),
-        ]
+        side_effect=InternalServerError("provider unavailable", response=response_500, body=None)
     )
     adapter = adapter_with_parse(parse)
 
-    extracted = asyncio.run(adapter.extract_with_metadata(prepared_image))
+    with pytest.raises(ExtractionError) as captured:
+        asyncio.run(adapter.extract_with_metadata(prepared_image))
 
-    assert extracted.attempt_count == 2
-    assert parse.await_count == 2
+    assert captured.value.kind == ExtractionErrorKind.TRANSIENT_FAILURE
+    assert captured.value.retryable is True
+    assert parse.await_count == 1
 
 
 def test_does_not_retry_timeout(prepared_image: PreparedImage) -> None:
@@ -214,7 +208,7 @@ def test_does_not_retry_rate_limit(prepared_image: PreparedImage) -> None:
         asyncio.run(adapter.extract(prepared_image))
 
     assert captured.value.kind == ExtractionErrorKind.TRANSIENT_FAILURE
-    assert captured.value.retryable is True
+    assert captured.value.retryable is False
     assert parse.await_count == 1
 
 
@@ -254,8 +248,6 @@ def test_missing_prepared_image_is_safe_internal_failure(tmp_path: Path) -> None
         ({"service_tier": "priority"}, "service tier"),
         ({"max_output_tokens": 100}, "maximum output tokens"),
         ({"timeout_seconds": 0}, "timeout"),
-        ({"transient_retries": 2}, "transient retries"),
-        ({"retry_delay_seconds": -1}, "retry delay"),
     ],
 )
 def test_adapter_configuration_is_bounded(overrides: dict[str, object], message: str) -> None:
