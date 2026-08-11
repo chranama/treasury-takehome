@@ -1,19 +1,88 @@
+import { useState } from 'react'
+
+import { submitReview, ReviewRequestError } from './reviewApi'
+import { ReviewForm } from './ReviewForm'
+import {
+  EmptyResults,
+  ProcessingResults,
+  ReviewFailure,
+  ReviewResults,
+} from './ReviewResults'
+import type { ApiErrorResponse, ReviewResponse, ReviewSubmission } from './reviewTypes'
+
 function App() {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [result, setResult] = useState<ReviewResponse | null>(null)
+  const [error, setError] = useState<ApiErrorResponse | null>(null)
+
+  async function handleSubmit(submission: ReviewSubmission) {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    setResult(null)
+    setError(null)
+
+    try {
+      setResult(await submitReview(submission))
+    } catch (caught) {
+      if (caught instanceof ReviewRequestError) setError(caught.details)
+      else {
+        setError({
+          category: 'internal_error',
+          message: 'The review could not be completed. Try again.',
+          correlation_id: '',
+          processing_duration_ms: 0,
+        })
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
-    <main className="app-shell">
-      <section className="intro" aria-labelledby="page-title">
-        <p className="eyebrow">Reviewer-assist prototype</p>
-        <h1 id="page-title">Alcohol Label Verification</h1>
-        <p className="summary">
-          Compare expected application values with visible label artwork while keeping uncertain
-          and regulatory decisions with a human reviewer.
-        </p>
-        <div className="status" role="status">
-          <span aria-hidden="true" className="status-dot" />
-          P0 review workflow is being implemented
+    <>
+      <header className="site-header">
+        <div className="header-inner">
+          <a className="skip-link" href="#main-content">
+            Skip to main content
+          </a>
+          <div className="wordmark">
+            <span aria-hidden="true">LR</span>
+            <span>Label Review</span>
+          </div>
+          <span className="prototype-tag">Prototype</span>
         </div>
-      </section>
-    </main>
+      </header>
+
+      <main className="app-shell" id="main-content">
+        <section className="page-intro" aria-labelledby="page-title">
+          <p className="eyebrow">Reviewer-assist workflow</p>
+          <h1 id="page-title">Alcohol Label Verification</h1>
+          <p className="summary">
+            Compare expected application values with visible label artwork. Uncertain findings and
+            regulatory decisions always remain with a human reviewer.
+          </p>
+        </section>
+
+        <div className="workflow-layout">
+          <ReviewForm isSubmitting={isSubmitting} onSubmit={handleSubmit} />
+          <div className="results-column">
+            {isSubmitting ? (
+              <ProcessingResults />
+            ) : error ? (
+              <ReviewFailure error={error} />
+            ) : result ? (
+              <ReviewResults result={result} />
+            ) : (
+              <EmptyResults />
+            )}
+          </div>
+        </div>
+      </main>
+
+      <footer>
+        <p>Demonstration only · Not a TTB production system</p>
+      </footer>
+    </>
   )
 }
 
