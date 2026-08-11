@@ -25,10 +25,11 @@ def test_content_length_is_rejected_before_body_parsing() -> None:
         response = client.post("/consume", content=b"123456")
 
     assert response.status_code == 413
-    assert response.json() == {
-        "category": "invalid_input",
-        "message": "The review request exceeds the allowed upload size.",
-    }
+    payload = response.json()
+    assert payload["category"] == "invalid_input"
+    assert payload["message"] == "The review request exceeds the allowed upload size."
+    assert isinstance(payload["correlation_id"], str)
+    assert payload["processing_duration_ms"] >= 0
 
 
 def test_request_body_limit_requires_positive_values() -> None:

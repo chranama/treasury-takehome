@@ -3,6 +3,8 @@ from collections.abc import Mapping
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.api.correlation import correlation_id_from_scope, elapsed_ms_from_scope
+
 SINGLE_REVIEW_MULTIPART_OVERHEAD_BYTES = 256 * 1024
 
 
@@ -72,11 +74,15 @@ def _content_length(scope: Scope) -> int | None:
 
 
 async def _send_too_large(scope: Scope, receive: Receive, send: Send) -> None:
+    correlation_id = correlation_id_from_scope(scope)
     response = JSONResponse(
         status_code=413,
         content={
             "category": "invalid_input",
             "message": "The review request exceeds the allowed upload size.",
+            "correlation_id": correlation_id,
+            "processing_duration_ms": elapsed_ms_from_scope(scope),
         },
+        headers={"X-Correlation-ID": correlation_id},
     )
     await response(scope, receive, send)

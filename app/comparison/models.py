@@ -60,6 +60,7 @@ class ApplicationErrorCategory(StrEnum):
     CAPACITY_REACHED = "capacity_reached"
     TRAFFIC_THROTTLED = "traffic_throttled"
     PROVIDER_TIMEOUT = "provider_timeout"
+    PROVIDER_UNAVAILABLE = "provider_unavailable"
     MALFORMED_PROVIDER_OUTPUT = "malformed_provider_output"
     INTERNAL_ERROR = "internal_error"
 

@@ -1,8 +1,8 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     live_extraction_enabled: bool = False
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-5.6-luna"
+    extraction_timeout_seconds: Annotated[float, Field(gt=0, le=15)] = 12.0
 
     @field_validator("database_path", "temp_dir", "frontend_dist_path", mode="after")
     @classmethod
