@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     frontend_dist_path: Path = PROJECT_ROOT / "frontend" / "dist"
 
     extraction_backend: Literal["fake", "openai"] = "fake"
+    fake_extraction_scenario: str = "clear_matching_label"
     live_extraction_enabled: bool = False
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-5.6-luna"
