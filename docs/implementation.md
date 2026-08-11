@@ -82,7 +82,7 @@ The structured response represents observations rather than compliance conclusio
 
 The extraction adapter validates that response into Pydantic models. Pure application functions then normalize and compare values, detect ambiguity or conflicting candidates, check warning wording and observable style, and derive `All checks passed`, `Needs review`, or `Unable to process`.
 
-The hosted adapter uses the Responses API structured-output parser to validate directly against the shared Pydantic observation schema. Its stable `label-observations-v1` instructions are sent separately from a user message containing one normalized image as an in-memory data URL. The request uses `gpt-5.6-luna`, `detail: high`, no tools, `reasoning.effort: none`, `store: false`, and a 1,000-token output ceiling.
+The hosted adapter uses the Responses API structured-output parser to validate directly against the shared Pydantic observation schema. Its stable `label-observations-v2` instructions are sent separately from a user message containing one normalized image as an in-memory data URL. The request uses `gpt-5.6-luna`, `detail: high`, no tools, `reasoning.effort: none`, `store: false`, and a 1,000-token output ceiling. The instructions reserve `not_visible` for absence supported by usable image quality; image degradation that prevents that determination is reported as uncertainty.
 
 Both the provider request and the complete adapter operation are bounded by the 12-second extraction deadline. SDK retries are disabled. The application permits one short retry only for a connection failure or provider 5xx response; it does not automatically retry a timeout or rate-limit response. Provider exceptions are converted to the bounded extraction-error contract without returning provider payloads to the browser.
 
@@ -136,7 +136,7 @@ The deployed application bounds spend and request bursts through:
 
 Exact financial budgets and abuse thresholds are deployment configuration rather than public repository values. If live extraction is unavailable because a guard is reached, the application keeps its static interface and clearly identified sample results available; it never presents a stored or fake result as a newly processed review.
 
-The application records provider-reported token usage, latency, and estimated cost without logging uploaded content. Model and image-detail choices will be compared on representative fixtures using correctness, uncertainty behavior, latency, and cost together. Measured median and upper-percentile cost will be added after the evaluation is repeatable; provisional estimates are not reported as observed results.
+The application records provider-reported token usage, latency, and estimated cost without logging uploaded content. Model and image-detail choices are evaluated on representative fixtures using correctness, uncertainty behavior, latency, and cost together. Provisional estimates are not reported as observed results.
 
 ## Testing and evaluation
 
@@ -149,15 +149,19 @@ The test strategy has four layers:
 
 Ordinary automated tests make no external model calls. The live evaluation records its model, image-detail setting, fixture set, correctness, uncertainty handling, malformed-response rate, latency, token usage, and estimated cost.
 
-The versioned live fixture manifest defines four deterministic synthetic cases: a clear matching label, a net-contents mismatch, an altered Government Warning, and an unreadable label. The fixture artwork is generated locally from that manifest, and the evidence report records the manifest hash and prompt revision so a later result is attributable to one configuration. Running `uv run python -m evals.live --confirm-paid-run --output <path>` is the only documented evaluation path that intentionally incurs provider charges. The initial run uses `high` image detail; `original` is an explicit follow-up configuration only if warning transcription at `high` does not meet the gate.
+On August 11, 2026, three unchanged `gpt-5.6-luna` runs at `high` detail passed all 12 versioned synthetic cases with no malformed responses or retries. The clear label passed all five checks; the known net-contents and warning alterations were detected every time; and the unreadable fixture produced uncertainty without fabricated text. Median latency was 2.70 seconds and the slowest request was 8.55 seconds. Estimated per-case cost was $0.000360 at the median and $0.000903 at the nearest-rank 95th percentile under pricing checked that day. These results support a prototype baseline only; the fixture set is small and synthetic, and the latency outlier still requires deployed-path validation.
 
-The harness and fixtures are implemented, but no live quality result is claimed until that paid command is run and its evidence is reviewed. Hosted extraction also remains unavailable through the public application until the Milestone 7 usage reservations and operational safeguards are active.
+A paired follow-up compared 40 Standard and 40 [Fast-mode](https://developers.openai.com/api/docs/guides/fast-mode) requests using the same model, prompt, detail, and four fixtures. Standard passed 40/40 with 2.09-second median, 3.19-second p95, and 4.75-second maximum latency. Fast completed and passed 39/40; its successful requests had a 1.70-second median but a 3.77-second p95 and 7.68-second maximum, while the remaining request reached the 12-second application deadline. Fast therefore reduced median latency by 18.6% but did not improve the observed tail, and its per-success median cost was approximately twice Standard. The deployment default remains Standard; Fast is an explicit configuration option rather than an automatic fallback. These small synthetic samples do not establish a production latency distribution.
+
+The versioned live fixture manifest defines four deterministic synthetic cases: a clear matching label, a net-contents mismatch, an altered Government Warning, and an unreadable label. The fixture artwork is generated locally from that manifest, and the evidence report records the manifest hash and prompt revision so a later result is attributable to one configuration. The explicitly invoked `evals.live` and `evals.tier_benchmark` commands are the only documented evaluation paths that intentionally incur provider charges. The initial run uses `high` image detail; `original` is an explicit follow-up configuration only if warning transcription at `high` does not meet the gate.
+
+Raw evaluation evidence remains local and gitignored because it contains diagnostic observations and provider request identifiers. Hosted extraction remains unavailable through the public application until the Milestone 7 usage reservations and operational safeguards are active.
 
 A deployed smoke test will complete the P0 happy path in a current desktop browser and verify that browser runtime requests do not depend on third-party asset, model, storage, analytics, telemetry, or authentication domains.
 
 The initial quality gates are conservative: known material mismatches and altered warnings must not match; missing or unreadable values must not be invented; the supplied clear fixture must complete all five checks; and one failed case must not fail a batch.
 
-Performance results will be added after at least 10 consecutive warm runs. Browser upload time and any deployment cold-start effect will be reported separately from server processing time.
+Deployment performance results will be added after at least 10 consecutive warm runs. Browser upload time and any deployment cold-start effect will be reported separately from server processing time; the evaluation latency above measures the provider extraction path rather than the deployed browser workflow.
 
 ## Deployment and network assumptions
 

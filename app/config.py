@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-5.6-luna"
     openai_image_detail: Literal["high", "original"] = "high"
+    openai_service_tier: Literal["default", "fast"] = "default"
     openai_max_output_tokens: Annotated[int, Field(ge=256, le=2_000)] = 1_000
     openai_transient_retries: Annotated[int, Field(ge=0, le=1)] = 1
     extraction_timeout_seconds: Annotated[float, Field(gt=0, le=15)] = 12.0

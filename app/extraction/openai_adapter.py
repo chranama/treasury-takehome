@@ -26,7 +26,7 @@ from pydantic import ValidationError
 from app.comparison.models import ExtractionObservations
 from app.extraction.contract import ExtractionError, ExtractionErrorKind, PreparedImage
 
-PROMPT_REVISION = "label-observations-v1"
+PROMPT_REVISION = "label-observations-v2"
 EXTRACTION_INSTRUCTIONS = """You extract visible observations from one alcohol label image for a
 human reviewer.
 
@@ -38,6 +38,11 @@ For brand name, class or type, alcohol content, and net contents:
 - use an empty candidate list when no text is reliably readable;
 - describe whether the field is visible and readable; and
 - use uncertain states instead of selecting a guess.
+
+Use not_visible only when image quality is sufficient to determine that the field or warning is
+absent. When blur, low resolution, obstruction, cropping, or another image-quality problem prevents
+you from determining whether it is present, report visibility as uncertain and readability as
+unreadable or uncertain.
 
 For the Government Warning:
 - transcribe the complete visible warning exactly, preserving capitalization and punctuation;
@@ -65,6 +70,8 @@ class OpenAIExtractionResult:
     model: str
     prompt_revision: str
     image_detail: str
+    requested_service_tier: str
+    response_service_tier: str | None
     attempt_count: int
     latency_ms: int
     usage: OpenAIUsage | None
@@ -75,6 +82,7 @@ class OpenAIExtractionAdapter:
     client: AsyncOpenAI
     model: str
     image_detail: str = "high"
+    service_tier: str = "default"
     max_output_tokens: int = 1_000
     timeout_seconds: float = 12.0
     transient_retries: int = 1
@@ -83,6 +91,8 @@ class OpenAIExtractionAdapter:
     def __post_init__(self) -> None:
         if self.image_detail not in {"high", "original"}:
             raise ValueError("image detail must be high or original")
+        if self.service_tier not in {"default", "fast"}:
+            raise ValueError("service tier must be default or fast")
         if not 256 <= self.max_output_tokens <= 2_000:
             raise ValueError("maximum output tokens must be between 256 and 2,000")
         if self.timeout_seconds <= 0:
@@ -142,6 +152,7 @@ class OpenAIExtractionAdapter:
                     text_format=ExtractionObservations,
                     tools=[],
                     reasoning={"effort": "none"},
+                    service_tier=self.service_tier,
                     max_output_tokens=self.max_output_tokens,
                     store=False,
                     timeout=self.timeout_seconds,
@@ -176,6 +187,8 @@ class OpenAIExtractionAdapter:
                 model=response.model,
                 prompt_revision=PROMPT_REVISION,
                 image_detail=self.image_detail,
+                requested_service_tier=self.service_tier,
+                response_service_tier=response.service_tier,
                 attempt_count=attempt_count,
                 latency_ms=latency_ms,
                 usage=self._usage(response.usage),

@@ -16,7 +16,13 @@ from app.comparison import (
 from app.config import Settings
 from app.extraction import OpenAIExtractionResult, OpenAIUsage
 from evals.fixtures import load_manifest
-from evals.live import estimated_cost_usd, evaluate_success, run_evaluation, summarize
+from evals.live import (
+    estimated_cost_usd,
+    evaluate_success,
+    run_evaluation,
+    source_state,
+    summarize,
+)
 
 MANIFEST = Path(__file__).resolve().parents[2] / "fixtures" / "live-evaluation-v1.json"
 
@@ -31,6 +37,9 @@ def test_cost_uses_versioned_uncached_cached_and_output_rates() -> None:
     )
 
     assert estimated_cost_usd("gpt-5.6-luna", usage) == Decimal("0.27500000")
+    assert estimated_cost_usd("gpt-5.6-luna", usage, "fast") == Decimal("0.55000000")
+    assert estimated_cost_usd("gpt-5.6-luna", usage, "priority") == Decimal("0.55000000")
+    assert estimated_cost_usd("gpt-5.6-luna", usage, "scale") is None
     assert estimated_cost_usd("another-model", usage) is None
     assert estimated_cost_usd("gpt-5.6-luna", None) is None
 
@@ -62,6 +71,8 @@ def test_unreadable_case_rejects_fabricated_candidates() -> None:
         model="gpt-5.6-luna",
         prompt_revision="test",
         image_detail="high",
+        requested_service_tier="default",
+        response_service_tier="default",
         attempt_count=1,
         latency_ms=100,
         usage=None,
@@ -71,6 +82,12 @@ def test_unreadable_case_rejects_fabricated_candidates() -> None:
 
     assert record["passed"] is True
     assert record["uncertainty_passed"] is True
+    assert record["observations"]["brand_name"] == {
+        "candidates": [],
+        "visibility": "uncertain",
+        "readability": "unreadable",
+        "note": None,
+    }
 
     observations.brand_name = FieldObservation(
         candidates=[TextCandidate(text="Treasury Reserve")],
@@ -104,6 +121,8 @@ def test_summary_counts_failures_and_malformed_outputs() -> None:
     assert summary["malformed_output_count"] == 1
     assert summary["malformed_output_rate"] == 0.5
     assert summary["median_latency_ms"] == 100
+    assert summary["p90_latency_ms"] == 100
+    assert summary["p95_latency_ms"] == 100
     assert summary["total_estimated_cost_usd"] == "0.001"
 
 
@@ -121,3 +140,14 @@ def test_live_evaluation_refuses_to_overwrite_evidence(tmp_path: Path) -> None:
         )
 
     assert output.read_text(encoding="utf-8") == "preserve me"
+
+
+def test_source_state_records_commit_and_dirty_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    responses = {
+        ("rev-parse", "HEAD"): "a" * 40,
+        ("status", "--porcelain=v1", "--untracked-files=normal"): " M evals/live.py",
+    }
+
+    monkeypatch.setattr("evals.live._run_git", lambda *args: responses[args])
+
+    assert source_state() == {"git_commit": "a" * 40, "dirty": True}

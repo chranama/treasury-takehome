@@ -70,6 +70,7 @@ def response(*, parsed: ExtractionObservations | None = None, status: str = "com
         id="resp_test",
         model="gpt-5.6-luna",
         usage=usage,
+        service_tier="default",
     )
 
 
@@ -79,6 +80,7 @@ def adapter_with_parse(parse: AsyncMock, **overrides: object) -> OpenAIExtractio
         "client": client,
         "model": "gpt-5.6-luna",
         "image_detail": "high",
+        "service_tier": "default",
         "max_output_tokens": 1_000,
         "timeout_seconds": 12.0,
         "transient_retries": 1,
@@ -114,6 +116,8 @@ def test_sends_one_image_with_bounded_structured_response(
     assert extracted.model == "gpt-5.6-luna"
     assert extracted.prompt_revision == PROMPT_REVISION
     assert extracted.image_detail == "high"
+    assert extracted.requested_service_tier == "default"
+    assert extracted.response_service_tier == "default"
     assert extracted.attempt_count == 1
     assert extracted.usage is not None
     assert extracted.usage.input_tokens == 800
@@ -124,9 +128,12 @@ def test_sends_one_image_with_bounded_structured_response(
     request = parse.await_args.kwargs
     assert request["model"] == "gpt-5.6-luna"
     assert request["instructions"] == EXTRACTION_INSTRUCTIONS
+    assert PROMPT_REVISION == "label-observations-v2"
+    assert "Use not_visible only when image quality is sufficient" in request["instructions"]
     assert request["text_format"] is ExtractionObservations
     assert request["tools"] == []
     assert request["reasoning"] == {"effort": "none"}
+    assert request["service_tier"] == "default"
     assert request["max_output_tokens"] == 1_000
     assert request["store"] is False
     assert request["timeout"] == 12.0
@@ -244,6 +251,7 @@ def test_missing_prepared_image_is_safe_internal_failure(tmp_path: Path) -> None
     ("overrides", "message"),
     [
         ({"image_detail": "auto"}, "image detail"),
+        ({"service_tier": "priority"}, "service tier"),
         ({"max_output_tokens": 100}, "maximum output tokens"),
         ({"timeout_seconds": 0}, "timeout"),
         ({"transient_retries": 2}, "transient retries"),

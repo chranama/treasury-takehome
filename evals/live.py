@@ -2,6 +2,8 @@ import argparse
 import asyncio
 import hashlib
 import json
+import math
+import subprocess
 import tempfile
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -23,21 +25,61 @@ from evals.fixtures import EvaluationCase, load_manifest, render_fixture
 
 DEFAULT_MANIFEST = PROJECT_ROOT / "fixtures" / "live-evaluation-v1.json"
 PRICING_CHECKED_AT = "2026-08-11"
-PRICING_SOURCE = "https://developers.openai.com/api/docs/models/gpt-5.6-luna"
+PRICING_SOURCE = "https://developers.openai.com/api/docs/pricing"
 LUNA_INPUT_USD_PER_MILLION = Decimal("0.20")
 LUNA_CACHED_INPUT_USD_PER_MILLION = Decimal("0.02")
 LUNA_OUTPUT_USD_PER_MILLION = Decimal("1.20")
+LUNA_FAST_RATE_MULTIPLIER = Decimal("2")
 
 
-def estimated_cost_usd(model: str, usage: OpenAIUsage | None) -> Decimal | None:
-    if model != "gpt-5.6-luna" or usage is None:
+def _run_git(*args: str) -> str:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=PROJECT_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return completed.stdout.strip()
+
+
+def source_state() -> dict[str, object]:
+    try:
+        commit = _run_git("rev-parse", "HEAD")
+        dirty = bool(_run_git("status", "--porcelain=v1", "--untracked-files=normal"))
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise RuntimeError("Evaluation source revision could not be determined.") from error
+    return {"git_commit": commit, "dirty": dirty}
+
+
+def estimated_cost_usd(
+    model: str,
+    usage: OpenAIUsage | None,
+    service_tier: str = "default",
+) -> Decimal | None:
+    if (
+        model != "gpt-5.6-luna"
+        or usage is None
+        or service_tier
+        not in {
+            "default",
+            "fast",
+            "priority",
+        }
+    ):
         return None
+    rate_multiplier = (
+        LUNA_FAST_RATE_MULTIPLIER if service_tier in {"fast", "priority"} else Decimal(1)
+    )
     uncached_tokens = max(0, usage.input_tokens - usage.cached_input_tokens)
     denominator = Decimal(1_000_000)
     cost = (
-        Decimal(uncached_tokens) / denominator * LUNA_INPUT_USD_PER_MILLION
-        + Decimal(usage.cached_input_tokens) / denominator * LUNA_CACHED_INPUT_USD_PER_MILLION
-        + Decimal(usage.output_tokens) / denominator * LUNA_OUTPUT_USD_PER_MILLION
+        Decimal(uncached_tokens) / denominator * LUNA_INPUT_USD_PER_MILLION * rate_multiplier
+        + Decimal(usage.cached_input_tokens)
+        / denominator
+        * LUNA_CACHED_INPUT_USD_PER_MILLION
+        * rate_multiplier
+        + Decimal(usage.output_tokens) / denominator * LUNA_OUTPUT_USD_PER_MILLION * rate_multiplier
     )
     return cost.quantize(Decimal("0.00000001"))
 
@@ -81,7 +123,8 @@ def evaluate_success(
         and uncertainty_passed is not False
     )
     usage = extraction.usage
-    cost = estimated_cost_usd(extraction.model, usage)
+    billed_service_tier = extraction.response_service_tier or extraction.requested_service_tier
+    cost = estimated_cost_usd(extraction.model, usage, billed_service_tier)
     return {
         "id": case.id,
         "passed": passed,
@@ -89,7 +132,10 @@ def evaluate_success(
         "actual_outcome": review.outcome.value,
         "check_statuses": _check_statuses(review),
         "uncertainty_passed": uncertainty_passed,
+        "observations": extraction.observations.model_dump(mode="json"),
         "provider_request_id": extraction.provider_request_id,
+        "requested_service_tier": extraction.requested_service_tier,
+        "response_service_tier": extraction.response_service_tier,
         "attempt_count": extraction.attempt_count,
         "latency_ms": extraction.latency_ms,
         "usage": (
@@ -108,7 +154,11 @@ def evaluate_success(
     }
 
 
-def evaluate_failure(case: EvaluationCase, error: ExtractionError) -> dict[str, object]:
+def evaluate_failure(
+    case: EvaluationCase,
+    error: ExtractionError,
+    requested_service_tier: str | None = None,
+) -> dict[str, object]:
     return {
         "id": case.id,
         "passed": False,
@@ -116,13 +166,25 @@ def evaluate_failure(case: EvaluationCase, error: ExtractionError) -> dict[str, 
         "actual_outcome": None,
         "check_statuses": {},
         "uncertainty_passed": False if case.requires_uncertainty else None,
+        "observations": None,
         "provider_request_id": None,
+        "requested_service_tier": requested_service_tier,
+        "response_service_tier": None,
         "attempt_count": None,
         "latency_ms": None,
         "usage": None,
         "estimated_cost_usd": None,
         "error_kind": error.kind.value,
     }
+
+
+def nearest_rank(values: list[int], percentile: float) -> int | None:
+    if not values:
+        return None
+    if not 0 < percentile <= 1:
+        raise ValueError("percentile must be greater than zero and at most one")
+    ordered = sorted(values)
+    return ordered[math.ceil(percentile * len(ordered)) - 1]
 
 
 def summarize(records: list[dict[str, object]]) -> dict[str, object]:
@@ -142,6 +204,8 @@ def summarize(records: list[dict[str, object]]) -> dict[str, object]:
         "malformed_output_count": malformed_count,
         "malformed_output_rate": malformed_count / len(records) if records else 0,
         "median_latency_ms": int(median(latencies)) if latencies else None,
+        "p90_latency_ms": nearest_rank(latencies, 0.90),
+        "p95_latency_ms": nearest_rank(latencies, 0.95),
         "slowest_latency_ms": max(latencies) if latencies else None,
         "total_estimated_cost_usd": str(sum(costs, Decimal(0))) if costs else None,
     }
@@ -170,18 +234,20 @@ async def run_evaluation(
                 try:
                     extraction = await adapter.extract_with_metadata(prepared)
                 except ExtractionError as error:
-                    records.append(evaluate_failure(case, error))
+                    records.append(evaluate_failure(case, error, adapter.service_tier))
                 else:
                     records.append(evaluate_success(case, extraction))
     finally:
         await adapter.aclose()
 
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": datetime.now(UTC).isoformat(),
+        "source": source_state(),
         "configuration": {
             "model": settings.openai_model,
             "image_detail": settings.openai_image_detail,
+            "requested_service_tier": settings.openai_service_tier,
             "prompt_revision": PROMPT_REVISION,
             "fixture_revision": manifest.revision,
             "fixture_manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
@@ -197,6 +263,7 @@ async def run_evaluation(
             "input_usd_per_million": str(LUNA_INPUT_USD_PER_MILLION),
             "cached_input_usd_per_million": str(LUNA_CACHED_INPUT_USD_PER_MILLION),
             "output_usd_per_million": str(LUNA_OUTPUT_USD_PER_MILLION),
+            "fast_rate_multiplier": str(LUNA_FAST_RATE_MULTIPLIER),
             "applies_to_model": "gpt-5.6-luna",
         },
         "summary": summarize(records),
@@ -225,6 +292,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--model", default=None)
     parser.add_argument("--image-detail", choices=["high", "original"], default=None)
+    parser.add_argument("--service-tier", choices=["default", "fast"], default=None)
     args = parser.parse_args()
     if not args.confirm_paid_run:
         parser.error("--confirm-paid-run is required for a live provider evaluation")
@@ -238,6 +306,7 @@ def main() -> None:
         live_extraction_enabled=True,
         **({"openai_model": args.model} if args.model else {}),
         **({"openai_image_detail": args.image_detail} if args.image_detail else {}),
+        **({"openai_service_tier": args.service_tier} if args.service_tier else {}),
     )
     issues = configured.configuration_issues()
     if issues:
