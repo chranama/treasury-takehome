@@ -15,7 +15,11 @@ from app.api.reviews import router as reviews_router
 from app.api.system import router as system_router
 from app.config import Settings, get_settings
 from app.db import initialize_database
-from app.extraction import ExtractionAdapter, create_extraction_adapter
+from app.extraction import (
+    ExtractionAdapter,
+    OpenAIExtractionAdapter,
+    create_extraction_adapter,
+)
 from app.reviews import AttemptGate, NoCostFakeAttemptGate, ReviewService
 from app.storage.images import DEFAULT_IMAGE_LIMITS
 
@@ -29,15 +33,26 @@ def create_app(
     resolved_settings = settings or get_settings()
     resolved_adapter = extraction_adapter
     resolved_attempt_gate = attempt_gate
+    owned_openai_adapter: OpenAIExtractionAdapter | None = None
     if resolved_settings.extraction_backend == "fake":
         resolved_adapter = resolved_adapter or create_extraction_adapter(resolved_settings)
         resolved_attempt_gate = resolved_attempt_gate or NoCostFakeAttemptGate()
+    elif resolved_settings.live_extraction_enabled and not resolved_settings.configuration_issues():
+        if resolved_adapter is None:
+            created_adapter = create_extraction_adapter(resolved_settings)
+            resolved_adapter = created_adapter
+            if isinstance(created_adapter, OpenAIExtractionAdapter):
+                owned_openai_adapter = created_adapter
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         resolved_settings.prepare_local_directories()
         initialize_database(resolved_settings.database_path)
-        yield
+        try:
+            yield
+        finally:
+            if owned_openai_adapter is not None:
+                await owned_openai_adapter.aclose()
 
     application = FastAPI(
         title="Alcohol Label Verification Prototype",

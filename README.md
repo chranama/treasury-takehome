@@ -4,11 +4,11 @@ A standalone proof of concept that helps an alcohol-label reviewer compare expec
 
 ## Project status
 
-The repository contains the application scaffold and operational health checks. The P0 single-review workflow is the current implementation priority.
+The P0 single-review workflow is implemented end to end with a deterministic development adapter. The hosted OpenAI extraction adapter and an explicit live-evaluation harness are also implemented. Public live extraction remains disabled until the usage ledger, concurrency controls, idempotency, and deployment safeguards are complete.
 
-## Planned demo
+## Demo workflow
 
-The core workflow will allow a reviewer to:
+The core workflow allows a reviewer to:
 
 1. enter the expected brand name, class/type, alcohol content, and net contents;
 2. upload a label image;
@@ -16,7 +16,7 @@ The core workflow will allow a reviewer to:
 4. check the mandatory Government Health Warning; and
 5. identify matches, discrepancies, and cases requiring human review.
 
-A bounded batch workflow is also planned to demonstrate how the same review could be applied to multiple applications.
+A bounded batch workflow is planned to demonstrate how the same review could be applied to multiple applications.
 
 ## Deployed application
 
@@ -75,7 +75,7 @@ npm --prefix frontend run lint
 npm --prefix frontend run build
 ```
 
-The browser-test scaffold is also available. Install Chromium once, then run it:
+The browser tests exercise the real frontend, multipart API, image preparation, deterministic comparison, and development adapter. Install Chromium once, then run them:
 
 ```bash
 npm --prefix frontend exec -- playwright install chromium
@@ -83,6 +83,18 @@ npm --prefix frontend run test:e2e
 ```
 
 Ordinary automated tests do not require an OpenAI key and must not make provider calls.
+
+## Explicit live evaluation
+
+The live evaluation is a separate, deliberately billable command. Configure `.env` with an OpenAI API key, then acknowledge the paid run and choose an evidence-file destination:
+
+```bash
+uv run python -m evals.live \
+  --confirm-paid-run \
+  --output .data/evaluations/luna-high.json
+```
+
+The default run makes four initial model requests over versioned synthetic fixtures, with at most one narrowly bounded retry per fixture. It records the exact configuration, fixture revision, check outcomes, uncertainty behavior, malformed-output rate, latency, provider token usage, and estimated cost. The command refuses to overwrite an existing evidence file. Use `--image-detail original` only as an explicit follow-up if warning transcription at the initial `high` setting fails.
 
 ## Documentation
 

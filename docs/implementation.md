@@ -1,7 +1,7 @@
 # Implementation Approach
 
 **Status:** Accepted architecture; implementation and measurements in progress
-**Last updated:** 2026-08-10
+**Last updated:** 2026-08-11
 
 ## Approach
 
@@ -82,6 +82,10 @@ The structured response represents observations rather than compliance conclusio
 
 The extraction adapter validates that response into Pydantic models. Pure application functions then normalize and compare values, detect ambiguity or conflicting candidates, check warning wording and observable style, and derive `All checks passed`, `Needs review`, or `Unable to process`.
 
+The hosted adapter uses the Responses API structured-output parser to validate directly against the shared Pydantic observation schema. Its stable `label-observations-v1` instructions are sent separately from a user message containing one normalized image as an in-memory data URL. The request uses `gpt-5.6-luna`, `detail: high`, no tools, `reasoning.effort: none`, `store: false`, and a 1,000-token output ceiling.
+
+Both the provider request and the complete adapter operation are bounded by the 12-second extraction deadline. SDK retries are disabled. The application permits one short retry only for a connection failure or provider 5xx response; it does not automatically retry a timeout or rate-limit response. Provider exceptions are converted to the bounded extraction-error contract without returning provider payloads to the browser.
+
 Tests can replace the hosted adapter with fixed responses. This keeps domain behavior testable without network access or API spend.
 
 When an image is unreadable or uncertain, the result explains the affected check and recommends a clearer resubmission rather than guessing a value.
@@ -144,6 +148,10 @@ The test strategy has four layers:
 4. an explicitly invoked live-provider evaluation over synthetic fixtures.
 
 Ordinary automated tests make no external model calls. The live evaluation records its model, image-detail setting, fixture set, correctness, uncertainty handling, malformed-response rate, latency, token usage, and estimated cost.
+
+The versioned live fixture manifest defines four deterministic synthetic cases: a clear matching label, a net-contents mismatch, an altered Government Warning, and an unreadable label. The fixture artwork is generated locally from that manifest, and the evidence report records the manifest hash and prompt revision so a later result is attributable to one configuration. Running `uv run python -m evals.live --confirm-paid-run --output <path>` is the only documented evaluation path that intentionally incurs provider charges. The initial run uses `high` image detail; `original` is an explicit follow-up configuration only if warning transcription at `high` does not meet the gate.
+
+The harness and fixtures are implemented, but no live quality result is claimed until that paid command is run and its evidence is reviewed. Hosted extraction also remains unavailable through the public application until the Milestone 7 usage reservations and operational safeguards are active.
 
 A deployed smoke test will complete the P0 happy path in a current desktop browser and verify that browser runtime requests do not depend on third-party asset, model, storage, analytics, telemetry, or authentication domains.
 

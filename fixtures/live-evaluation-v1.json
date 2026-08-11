@@ -1,0 +1,105 @@
+{
+  "revision": "live-evaluation-v1",
+  "cases": [
+    {
+      "id": "clear-matching-label",
+      "artwork": {
+        "brand_name": "Treasury Reserve",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "alcohol_content": "45% Alc./Vol. (90 Proof)",
+        "net_contents": "750 mL",
+        "warning_variant": "required",
+        "unreadable": false
+      },
+      "expected": {
+        "brand_name": "Treasury Reserve",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": "750",
+        "net_contents_unit": "mL"
+      },
+      "expected_outcome": "all_checks_passed",
+      "required_checks": {
+        "brand_name": "match",
+        "class_type": "match",
+        "alcohol_content": "match",
+        "net_contents": "match",
+        "government_warning": "match"
+      },
+      "requires_uncertainty": false
+    },
+    {
+      "id": "mismatched-net-contents",
+      "artwork": {
+        "brand_name": "Treasury Reserve",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "alcohol_content": "45% Alc./Vol. (90 Proof)",
+        "net_contents": "700 mL",
+        "warning_variant": "required",
+        "unreadable": false
+      },
+      "expected": {
+        "brand_name": "Treasury Reserve",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": "750",
+        "net_contents_unit": "mL"
+      },
+      "expected_outcome": "needs_review",
+      "required_checks": {
+        "net_contents": "mismatch"
+      },
+      "requires_uncertainty": false
+    },
+    {
+      "id": "altered-government-warning",
+      "artwork": {
+        "brand_name": "Treasury Reserve",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "alcohol_content": "45% Alc./Vol. (90 Proof)",
+        "net_contents": "750 mL",
+        "warning_variant": "altered",
+        "unreadable": false
+      },
+      "expected": {
+        "brand_name": "Treasury Reserve",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": "750",
+        "net_contents_unit": "mL"
+      },
+      "expected_outcome": "needs_review",
+      "required_checks": {
+        "government_warning": "mismatch"
+      },
+      "requires_uncertainty": false
+    },
+    {
+      "id": "unreadable-label",
+      "artwork": {
+        "brand_name": "Treasury Reserve",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "alcohol_content": "45% Alc./Vol. (90 Proof)",
+        "net_contents": "750 mL",
+        "warning_variant": "required",
+        "unreadable": true
+      },
+      "expected": {
+        "brand_name": "Treasury Reserve",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": "750",
+        "net_contents_unit": "mL"
+      },
+      "expected_outcome": "needs_review",
+      "required_checks": {
+        "brand_name": "needs_review",
+        "class_type": "needs_review",
+        "alcohol_content": "needs_review",
+        "net_contents": "needs_review",
+        "government_warning": "needs_review"
+      },
+      "requires_uncertainty": true
+    }
+  ]
+}

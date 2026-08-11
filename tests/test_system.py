@@ -1,8 +1,13 @@
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
+from unittest.mock import AsyncMock
 
 from fastapi.testclient import TestClient
+from openai import AsyncOpenAI
 
 from app.config import Settings
+from app.extraction import OpenAIExtractionAdapter
 from app.main import create_app
 
 
@@ -70,6 +75,27 @@ def test_disabled_live_extraction_keeps_static_application_ready(tmp_path: Path)
 
     assert response.status_code == 200
     assert response.json()["status"] == "ready"
+
+
+def test_application_closes_factory_owned_openai_client(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    close = AsyncMock()
+    client = cast(AsyncOpenAI, SimpleNamespace(close=close))
+    adapter = OpenAIExtractionAdapter(client=client, model="gpt-5.6-luna")
+    monkeypatch.setattr("app.main.create_extraction_adapter", lambda _: adapter)
+    settings = make_settings(
+        tmp_path,
+        extraction_backend="openai",
+        live_extraction_enabled=True,
+        openai_api_key="test-key",
+    )
+
+    with TestClient(create_app(settings)) as test_client:
+        assert test_client.get("/healthz").status_code == 200
+
+    close.assert_awaited_once_with()
 
 
 def test_root_explains_when_frontend_has_not_been_built(tmp_path: Path) -> None:

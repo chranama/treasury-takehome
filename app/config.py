@@ -28,12 +28,23 @@ class Settings(BaseSettings):
     live_extraction_enabled: bool = False
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-5.6-luna"
+    openai_image_detail: Literal["high", "original"] = "high"
+    openai_max_output_tokens: Annotated[int, Field(ge=256, le=2_000)] = 1_000
+    openai_transient_retries: Annotated[int, Field(ge=0, le=1)] = 1
     extraction_timeout_seconds: Annotated[float, Field(gt=0, le=15)] = 12.0
 
     @field_validator("database_path", "temp_dir", "frontend_dist_path", mode="after")
     @classmethod
     def resolve_project_path(cls, value: Path) -> Path:
         return value if value.is_absolute() else (PROJECT_ROOT / value).resolve()
+
+    @field_validator("openai_model")
+    @classmethod
+    def require_openai_model(cls, value: str) -> str:
+        model = value.strip()
+        if not model:
+            raise ValueError("OpenAI model must not be blank")
+        return model
 
     def prepare_local_directories(self) -> None:
         self.database_path.parent.mkdir(parents=True, exist_ok=True)

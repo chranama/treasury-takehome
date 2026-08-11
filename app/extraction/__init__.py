@@ -9,6 +9,13 @@ from app.extraction.contract import (
 )
 from app.extraction.factory import ExtractionConfigurationError, create_extraction_adapter
 from app.extraction.fake import FakeExtractionAdapter, FakeExtractionFailure, FakeExtractionScenario
+from app.extraction.openai_adapter import (
+    EXTRACTION_INSTRUCTIONS,
+    PROMPT_REVISION,
+    OpenAIExtractionAdapter,
+    OpenAIExtractionResult,
+    OpenAIUsage,
+)
 
 __all__ = [
     "ExtractionAdapter",
@@ -19,6 +26,11 @@ __all__ = [
     "FakeExtractionFailure",
     "FakeExtractionScenario",
     "ImageMediaType",
+    "OpenAIExtractionAdapter",
+    "OpenAIExtractionResult",
+    "OpenAIUsage",
+    "PROMPT_REVISION",
+    "EXTRACTION_INSTRUCTIONS",
     "PreparedImage",
     "create_extraction_adapter",
 ]

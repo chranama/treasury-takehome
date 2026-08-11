@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from app.config import Settings
@@ -6,6 +8,7 @@ from app.extraction import (
     ExtractionConfigurationError,
     FakeExtractionAdapter,
     FakeExtractionScenario,
+    OpenAIExtractionAdapter,
     create_extraction_adapter,
 )
 
@@ -33,8 +36,26 @@ def test_factory_rejects_unknown_fake_scenario() -> None:
         create_extraction_adapter(settings)
 
 
-def test_factory_never_substitutes_fake_for_openai() -> None:
-    settings = Settings(extraction_backend="openai", live_extraction_enabled=False)
+def test_factory_builds_openai_adapter_without_sdk_retries() -> None:
+    settings = Settings(
+        extraction_backend="openai",
+        live_extraction_enabled=True,
+        openai_api_key="test-key",
+    )
 
-    with pytest.raises(ExtractionConfigurationError, match="OpenAI extraction adapter"):
+    adapter = create_extraction_adapter(settings)
+
+    assert isinstance(adapter, OpenAIExtractionAdapter)
+    assert adapter.model == "gpt-5.6-luna"
+    assert adapter.image_detail == "high"
+    assert adapter.max_output_tokens == 1_000
+    assert adapter.transient_retries == 1
+    assert adapter.client.max_retries == 0
+    asyncio.run(adapter.client.close())
+
+
+def test_factory_requires_key_for_openai_without_substituting_fake() -> None:
+    settings = Settings(extraction_backend="openai", live_extraction_enabled=True)
+
+    with pytest.raises(ExtractionConfigurationError, match="requires an API key"):
         create_extraction_adapter(settings)

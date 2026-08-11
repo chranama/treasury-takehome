@@ -1,6 +1,9 @@
+from openai import AsyncOpenAI
+
 from app.config import Settings
 from app.extraction.contract import ExtractionAdapter
 from app.extraction.fake import FakeExtractionAdapter, FakeExtractionScenario
+from app.extraction.openai_adapter import OpenAIExtractionAdapter
 
 
 class ExtractionConfigurationError(RuntimeError):
@@ -20,6 +23,19 @@ def create_extraction_adapter(settings: Settings) -> ExtractionAdapter:
             ) from error
         return FakeExtractionAdapter(scenario=scenario)
 
-    raise ExtractionConfigurationError(
-        "The OpenAI extraction adapter is not implemented; live extraction is unavailable."
+    if settings.openai_api_key is None or not settings.openai_api_key.get_secret_value().strip():
+        raise ExtractionConfigurationError("The OpenAI extraction adapter requires an API key.")
+
+    client = AsyncOpenAI(
+        api_key=settings.openai_api_key.get_secret_value(),
+        timeout=settings.extraction_timeout_seconds,
+        max_retries=0,
+    )
+    return OpenAIExtractionAdapter(
+        client=client,
+        model=settings.openai_model,
+        image_detail=settings.openai_image_detail,
+        max_output_tokens=settings.openai_max_output_tokens,
+        timeout_seconds=settings.extraction_timeout_seconds,
+        transient_retries=settings.openai_transient_retries,
     )
