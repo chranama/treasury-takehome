@@ -5,9 +5,14 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api.request_limits import (
+    SINGLE_REVIEW_MULTIPART_OVERHEAD_BYTES,
+    RequestBodyLimitMiddleware,
+)
 from app.api.system import router as system_router
 from app.config import Settings, get_settings
 from app.db import initialize_database
+from app.storage.images import DEFAULT_IMAGE_LIMITS
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -25,6 +30,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url=None,
         redoc_url=None,
         lifespan=lifespan,
+    )
+    application.add_middleware(
+        RequestBodyLimitMiddleware,
+        path_limits={
+            "/api/reviews": (
+                DEFAULT_IMAGE_LIMITS.max_upload_bytes + SINGLE_REVIEW_MULTIPART_OVERHEAD_BYTES
+            )
+        },
     )
     application.state.settings = resolved_settings
     application.include_router(system_router)
