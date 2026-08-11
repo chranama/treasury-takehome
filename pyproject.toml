@@ -1,0 +1,38 @@
+[project]
+name = "treasury-label-review"
+version = "0.1.0"
+description = "Reviewer-assist prototype for comparing alcohol label artwork with expected application values"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "fastapi>=0.116,<1",
+    "openai>=2,<3",
+    "pillow>=11,<13",
+    "pydantic>=2.11,<3",
+    "pydantic-settings>=2.10,<3",
+    "python-multipart>=0.0.20,<1",
+    "uvicorn[standard]>=0.35,<1",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.10.0",
+    "pytest>=8.4,<10",
+    "pytest-cov>=6.2,<8",
+    "ruff>=0.12,<1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "SIM", "UP"]

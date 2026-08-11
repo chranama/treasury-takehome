@@ -4,7 +4,7 @@ A standalone proof of concept that helps an alcohol-label reviewer compare expec
 
 ## Project status
 
-The project is currently in planning and initial implementation. Technology-specific setup instructions and final test commands will be added as the implementation is established.
+The repository contains the application scaffold and operational health checks. The P0 single-review workflow is the current implementation priority.
 
 ## Planned demo
 
@@ -26,11 +26,63 @@ The submitted deployment will provide the working browser-based prototype withou
 
 ## Local setup and run instructions
 
-To be added after the application stack and dependency workflow are initialized.
+Prerequisites:
+
+- Python 3.12;
+- [`uv`](https://docs.astral.sh/uv/);
+- Node.js 22 or newer; and
+- npm.
+
+Install the locked dependencies and create local configuration:
+
+```bash
+uv sync
+npm --prefix frontend ci
+cp .env.example .env
+```
+
+Run the FastAPI backend:
+
+```bash
+uv run uvicorn app.main:app --reload
+```
+
+In another terminal, run the Vite development server. It proxies `/api/*`, `/healthz`, and `/readyz` to the backend:
+
+```bash
+npm --prefix frontend run dev
+```
+
+For a production-shaped local run, compile the frontend first and then start the backend without `--reload`:
+
+```bash
+npm --prefix frontend run build
+uv run uvicorn app.main:app
+```
+
+The backend then serves the compiled interface and API from the same origin. `GET /healthz` checks the process; `GET /readyz` checks local configuration, SQLite, and temporary storage without making a model request.
 
 ## Tests
 
-Test commands and fixture instructions will be added with the implementation.
+Run the non-network backend and frontend checks:
+
+```bash
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+npm --prefix frontend run test
+npm --prefix frontend run lint
+npm --prefix frontend run build
+```
+
+The browser-test scaffold is also available. Install Chromium once, then run it:
+
+```bash
+npm --prefix frontend exec -- playwright install chromium
+npm --prefix frontend run test:e2e
+```
+
+Ordinary automated tests do not require an OpenAI key and must not make provider calls.
 
 ## Documentation
 
