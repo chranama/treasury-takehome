@@ -102,3 +102,4 @@ The default run makes four initial model requests over versioned synthetic fixtu
 - [Demo specification and assumptions](docs/specification.md)
 - [Implementation approach, tools, and assumptions](docs/implementation.md)
 - [Native macOS deployment assets](deploy/macos/README.md)
+- [Fixture coverage and manifest contract](docs/fixture-coverage.md)
