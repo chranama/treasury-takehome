@@ -21,6 +21,7 @@ SHELL_ASSETS = [
     "install-release.sh",
     "install-service.sh",
     "preflight-host.sh",
+    "restart-service.sh",
     "rollback-release.sh",
     "start-label-review.sh",
 ]
@@ -71,6 +72,21 @@ def test_service_installer_is_one_time_root_scoped_and_fail_safe() -> None:
     assert 'launchctl bootout "$SERVICE_TARGET"' in content
     assert 'rm -f -- "$PLIST_TARGET"' in content
     assert "LaunchAgents" not in content
+
+
+def test_service_restart_is_confirmation_gated_and_release_aware() -> None:
+    content = (DEPLOY_ROOT / "restart-service.sh").read_text(encoding="utf-8")
+
+    assert '"${1:-}" = "--confirm-no-active-reviews"' in content
+    assert '"$(/usr/bin/id -un)" = "$EXPECTED_USER"' in content
+    assert 'old_owner=$(/bin/ps -o user= -p "$old_pid"' in content
+    assert '/bin/kill -TERM "$old_pid"' in content
+    assert '"$candidate" != "$old_pid"' in content
+    assert 'active_release=$(cd "$CURRENT_RELEASE" && pwd -P)' in content
+    assert "new_cwd=$(" in content
+    assert "new_listener=$(" in content
+    assert 'check-service.sh" local' in content
+    assert "sudo" not in content
 
 
 def test_runtime_logging_is_bounded_and_access_log_is_disabled(tmp_path: Path) -> None:

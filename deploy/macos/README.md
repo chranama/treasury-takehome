@@ -25,6 +25,7 @@ The application root contains immutable `releases/<full-commit>` directories and
 - `build-release.sh` validates a clean `main`, runs non-network checks, builds the frontend, and creates a commit-attributed archive and SHA-256 file.
 - `install-release.sh` verifies and installs that archive, creates an Intel-native locked Python 3.12 environment, and atomically activates it without restarting the service.
 - `install-service.sh` validates the active release and protected configuration, then installs and loads the one-time system LaunchDaemon without replacing an existing service.
+- `restart-service.sh` requires confirmation that no review is active, then asks launchd to replace the account-owned process and verifies its release, listener, health, and readiness.
 - `rollback-release.sh` activates an already installed, schema-compatible release without changing SQLite or restarting the service.
 - `start-label-review.sh` validates the protected environment, fixes production paths, and starts the selected release.
 - `run_server.py` fixes the single-process listener and provides bounded runtime logging without request access logs.
@@ -74,6 +75,18 @@ sudo /Users/chranama-server/treasury-takehome/current/deploy/macos/install-servi
 This is a one-time D1 action. Release upgrades change `current` and restart the already installed
 service separately; they do not rerun the installer.
 
+After activating a release or changing protected configuration, first confirm that no review is
+active and then use the account-owned restart path:
+
+```bash
+/Users/chranama-server/treasury-takehome/current/deploy/macos/restart-service.sh \
+  --confirm-no-active-reviews
+```
+
+The helper does not edit configuration or release links. It terminates only the launchd-managed
+process owned by `chranama-server`, waits for launchd to replace it, and verifies that the new
+process uses the selected immutable release and localhost listener.
+
 ## Verify and smoke test
 
 Neither health nor readiness makes a provider call:
@@ -107,7 +120,9 @@ After confirming that the target application supports the current database schem
 deploy/macos/rollback-release.sh --confirm-schema-compatible FULL_COMMIT
 ```
 
-The script changes only `current`. Restart the service separately after checking the selected commit, current database schema, and active workload. Never restore an older SQLite copy as an application rollback.
+The script changes only `current`. After checking the selected commit, current database schema,
+and active workload, restart with `restart-service.sh --confirm-no-active-reviews`. Never restore
+an older SQLite copy as an application rollback.
 
 ## Cloudflare route
 
