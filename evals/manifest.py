@@ -81,9 +81,10 @@ class TextPolicy(StrEnum):
 class RendererSpec(ManifestModel):
     id: Annotated[str, Field(min_length=1, max_length=100)]
     version: Annotated[str, Field(min_length=1, max_length=50)]
+    font_identity: Annotated[str, Field(min_length=1, max_length=100)]
     seed: int | None = None
 
-    @field_validator("id", "version")
+    @field_validator("id", "version", "font_identity")
     @classmethod
     def strip_nonblank_text(cls, value: str) -> str:
         stripped = value.strip()

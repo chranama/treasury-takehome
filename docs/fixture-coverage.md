@@ -105,3 +105,41 @@ Luna evidence. It retains its original schema and SHA-256
 The existing `evals.fixtures.load_manifest` path continues to load it. Expanded fixtures will use
 a new revision and the v2 contract; neither the old file nor its historical interpretation will
 be rewritten.
+
+## F1 renderer decisions
+
+The expanded renderer is additive: `evals.renderer` serves v2 suites, while the accepted v1
+renderer and manifest remain unchanged. The plan intentionally left the following implementation
+details open; F1 resolves them as follows:
+
+- The renderer uses Pillow's embedded Aileron Regular font instead of adding a binary font asset.
+  Each manifest records `pillow-embedded-aileron-regular` as the font identity, and the locked
+  Pillow dependency supplies the font without network access.
+- The renderer is currently fully deterministic and has no random effects. A v2 case therefore
+  records a null seed; non-null seeds are rejected until a seeded effect is deliberately added.
+- Ambiguity is represented by one to three explicit source strings per field rather than by a
+  probabilistic text generator. This supports multiple plausible brands, quantities, or alcohol
+  statements while keeping ground truth reviewable.
+- Layout is either one panel or a front/back composite. The composite allocates 43 percent of its
+  usable width to the front panel and permits only the back panel to rotate independently. A
+  rotated panel is scaled and centered within its original slot so rotation does not silently add
+  the separately controlled crop condition.
+- Typography controls field sizes and the observable brand, warning-heading, and warning-body
+  weights. Bold text is produced with a deterministic stroke around the same recorded font.
+- Degradations run in a fixed order: contrast, glare, obstruction, blur, global rotation, then
+  crop. Glare, obstruction, and crop geometry use normalized coordinates so the same source works
+  at different canvas sizes.
+- Canvas generation is bounded to 6,000 pixels per side and 40 megapixels, matching the current
+  provisional intake ceiling without changing that product limit.
+- Artifact SHA-256 is calculated over the final metadata-free RGB PNG. Manifest rendering checks
+  that hash and deletes a mismatched output so it cannot be mistaken for accepted evidence.
+- Reproducible test artifacts remain temporary. F1 does not commit generated binaries or create
+  the F2 hosted-model suite.
+
+On August 12, 2026, the generated clear composite, single panel, typography variant, two-brand
+and two-quantity ambiguity case, independently rotated back panel, combined degradation case,
+and globally rotated/cropped case were manually inspected. Each intended condition was visibly
+distinct. The inspection caught and corrected an initially clipped second quantity and a panel
+rotation implementation that also cropped the panel. The final rotation control preserves the
+complete panel boundary; crop remains an independent degradation. These temporary artifacts are
+test evidence for the renderer controls, not provider-quality evidence or committed demo files.

@@ -39,7 +39,8 @@ def hosted_manifest_payload() -> dict[str, object]:
                 "renderer": {
                     "id": "synthetic-label",
                     "version": "2",
-                    "seed": 20260812,
+                    "font_identity": "pillow-embedded-aileron-regular",
+                    "seed": None,
                 },
                 "artwork": {
                     "layout": "front-back-composite",
