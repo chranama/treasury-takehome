@@ -178,3 +178,87 @@ test('keeps a 25-row result set usable on a narrow screen and by keyboard', asyn
   await expect(page.getByRole('heading', { name: 'APP-1', exact: true })).toBeFocused()
   await expect(page.getByRole('group', { name: 'Review checks' })).toBeVisible()
 })
+
+test('presents one failed case as an independent result rather than a batch failure', async ({
+  page,
+}) => {
+  const batchId = '718117a6-8284-4946-8d65-7af8c333340c'
+  const completedCaseId = '5eb714c5-28d3-457d-b4dc-a9214b59878e'
+  const failedCaseId = 'fb939d25-81bd-4bd5-bfd6-80607c5261cc'
+  const failedSummary = {
+    case_id: failedCaseId,
+    row_number: 3,
+    application_id: 'APP-FAILED',
+    label_image_filename: 'failed.png',
+    state: 'failed',
+    issues: [],
+    outcome: null,
+    processing_duration_ms: null,
+    short_reason: 'The extraction service was unavailable.',
+  }
+  const batch = {
+    batch_id: batchId,
+    state: 'completed',
+    created_at: '2026-08-12T12:00:00Z',
+    expires_at: '2026-08-13T12:00:00Z',
+    counts: {
+      total: 2,
+      needs_correction: 0,
+      ready: 0,
+      queued: 0,
+      processing: 0,
+      completed: 1,
+      failed: 1,
+      interrupted: 0,
+      not_selected: 0,
+    },
+    cases: [
+      {
+        case_id: completedCaseId,
+        row_number: 2,
+        application_id: 'APP-PASSED',
+        label_image_filename: 'passed.png',
+        state: 'completed',
+        issues: [],
+        outcome: 'all_checks_passed',
+        processing_duration_ms: 850,
+        short_reason: 'All five checks matched.',
+      },
+      failedSummary,
+    ],
+    next_poll_after_ms: null,
+  }
+  await page.route('**/api/batches/**', async (route) => {
+    if (route.request().url().endsWith(`/cases/${failedCaseId}`)) {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          summary: failedSummary,
+          expected_input: {
+            brand_name: 'Treasury Reserve',
+            class_type: 'Kentucky Straight Bourbon Whiskey',
+            expected_abv: '45',
+            expected_net_contents: '750 mL',
+          },
+          normalized_expected: {},
+          result: null,
+        }),
+      })
+      return
+    }
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(batch) })
+  })
+
+  await page.goto(`/batch?batch=${batchId}`)
+
+  await expect(page.getByRole('heading', { name: 'Batch processing finished' })).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await page.getByRole('button', { name: /Failed \/ interrupted 1/ }).click()
+  await expect(page.getByRole('rowheader', { name: /APP-FAILED/ })).toBeVisible()
+  await page.getByRole('button', { name: 'View details' }).click()
+  await expect(page.getByRole('heading', { name: 'APP-FAILED' })).toBeFocused()
+  await expect(page.getByRole('heading', { name: 'No comparison result is available' })).toBeVisible()
+  await expect(
+    page.locator('.batch-case-result-detail').getByText('The extraction service was unavailable.'),
+  ).toBeVisible()
+})

@@ -125,6 +125,7 @@ def create_app(
             r"/api/batches/[^/]+/cases/[^/]+/image": (
                 DEFAULT_IMAGE_LIMITS.max_upload_bytes + SINGLE_REVIEW_MULTIPART_OVERHEAD_BYTES
             ),
+            r"/api/batches/[^/]+/start": BATCH_CORRECTION_BODY_BYTES,
         },
     )
     application.add_middleware(CorrelationIdMiddleware)

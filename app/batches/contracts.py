@@ -381,6 +381,7 @@ class BatchErrorCode(StrEnum):
     NO_READY_CASES = "batch_has_no_ready_cases"
     CORRECTIONS_REMAIN = "batch_has_corrections"
     RESULTS_UNAVAILABLE = "batch_results_unavailable"
+    REQUEST_TOO_LARGE = "batch_request_too_large"
 
 
 BATCH_NOT_FOUND_MESSAGE = "The requested batch is unavailable."
@@ -392,6 +393,7 @@ _BATCH_ERROR_MESSAGES: dict[BatchErrorCode, str] = {
         "Correct every case or explicitly choose to process ready cases only."
     ),
     BatchErrorCode.RESULTS_UNAVAILABLE: "Start the batch before downloading results.",
+    BatchErrorCode.REQUEST_TOO_LARGE: "The batch request exceeds the allowed size.",
 }
 
 

@@ -102,7 +102,7 @@ def _content_length(scope: Scope) -> int | None:
 async def _send_too_large(scope: Scope, receive: Receive, send: Send) -> None:
     correlation_id = correlation_id_from_scope(scope)
     path = scope.get("path", "")
-    if path.startswith("/api/batches"):
+    if path == "/api/batches/preflight" or path.endswith("/image"):
         code = "image_too_large" if path.endswith("/image") else "aggregate_upload_too_large"
         message = (
             "Choose an image no larger than 10 MB."
@@ -120,6 +120,13 @@ async def _send_too_large(scope: Scope, receive: Receive, send: Send) -> None:
                     "message": message,
                 }
             ],
+            "correlation_id": correlation_id,
+            "processing_duration_ms": elapsed_ms_from_scope(scope),
+        }
+    elif path.startswith("/api/batches"):
+        content = {
+            "code": "batch_request_too_large",
+            "message": "The batch request exceeds the allowed size.",
             "correlation_id": correlation_id,
             "processing_duration_ms": elapsed_ms_from_scope(scope),
         }

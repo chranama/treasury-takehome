@@ -201,15 +201,19 @@ class _SQLiteSubmission:
     async def reserve_attempt(self) -> AsyncGenerator[AttemptReservation, None]:
         attempt_id = await self._gate._reserve_attempt(self._correlation_id)
         reservation = _SQLiteAttemptReservation(self._gate, attempt_id)
+        completed_normally = False
         try:
             yield reservation
+            completed_normally = True
         except BaseException:
             if not reservation._settled:
                 await reservation.settle_failure("interrupted")
             raise
         finally:
             if not reservation._settled:
-                await reservation.settle_failure("internal_failure")
+                await reservation.settle_failure(
+                    "internal_failure" if completed_normally else "interrupted"
+                )
 
     async def complete(
         self,
@@ -334,6 +338,7 @@ class SQLiteUsageGate:
     ) -> AsyncGenerator[AttemptSubmission, None]:
         await self._acquire_slot(wait=wait_for_slot)
         submission: _SQLiteSubmission | None = None
+        completed_normally = False
         try:
             idempotency_hash = hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()
             await to_thread.run_sync(
@@ -344,6 +349,7 @@ class SQLiteUsageGate:
             submission = _SQLiteSubmission(self, correlation_id)
             try:
                 yield submission
+                completed_normally = True
             except AttemptRejected as error:
                 await submission.fail(error.kind.value)
                 raise
@@ -352,7 +358,9 @@ class SQLiteUsageGate:
                 raise
             finally:
                 if not submission._terminal:
-                    await submission.fail("internal_failure")
+                    await submission.fail(
+                        "internal_failure" if completed_normally else "interrupted"
+                    )
         finally:
             await self._release_slot()
 

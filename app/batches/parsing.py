@@ -313,8 +313,18 @@ def _parse_xlsx(path: Path) -> ParsedSpreadsheet:
         return _malformed(SpreadsheetKind.XLSX)
 
     try:
-        workbook = load_workbook(path, read_only=True, data_only=False, keep_links=False)
+        workbook_source = path.open("rb")
+    except OSError:
+        return _malformed(SpreadsheetKind.XLSX)
+    try:
+        workbook = load_workbook(
+            workbook_source,
+            read_only=True,
+            data_only=False,
+            keep_links=False,
+        )
     except (BadZipFile, InvalidFileException, KeyError, OSError, ValueError):
+        workbook_source.close()
         return _malformed(SpreadsheetKind.XLSX)
 
     try:
@@ -350,6 +360,7 @@ def _parse_xlsx(path: Path) -> ParsedSpreadsheet:
         return _malformed(SpreadsheetKind.XLSX)
     finally:
         workbook.close()
+        workbook_source.close()
 
 
 def _xlsx_cell(cell: Cell) -> _RawCell:

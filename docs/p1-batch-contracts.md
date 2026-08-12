@@ -1,6 +1,6 @@
 # P1 Batch Contracts
 
-**Status:** Milestone P1.0 contract through P1.6 progress and results interface
+**Status:** Milestone P1.0 contract through P1.7 retention and integrated regression
 
 **Schema proposal version:** 2
 
@@ -15,7 +15,8 @@ preflight, retrieval, correction, and replacement routes and the reviewer-facing
 P1.4 adds durable idempotent start and independently processes selected cases. P1.5 completes the
 bounded polling, case-detail, outcome-summary, and safe CSV download APIs. P1.6 adds the dedicated
 batch page, progress polling, triage filters, reusable P0 detail, refresh recovery, and terminal
-download interface.
+download interface. P1.7 closes the non-network retention, restart, request-bound, fixture, and
+content-free regression gates.
 
 No module under `app/batches` may import the OpenAI SDK. Each selected case will eventually call
 the existing P0 review boundary independently; expected values, filenames, spreadsheet content,
@@ -287,6 +288,39 @@ P1.6 makes the following concrete interaction choices:
 - The CSV action is shown only after the batch reaches a terminal state, even though the P1.5 API
   can represent an active batch. This keeps the primary reviewer download aligned with a stable
   terminal snapshot.
+
+## P1.7 retention and resilience policy
+
+P1.7 makes the following concrete reliability choices:
+
+- Immediate processed-image deletion remains the normal path. If that unlink fails, periodic
+  cleanup no longer treats the terminal case's `processing` image as live: it retries deletion on
+  the next cleanup pass and stores only an attempt count, timestamp, and bounded `os_error` or
+  `invalid_storage_key` category. No filename or filesystem error text enters bookkeeping.
+- Available images that were never selected remain until the batch's absolute expiry. Deleting the
+  expired batch cascades through all four content-bearing P1 tables and orphan cleanup removes the
+  remaining file. Content-free `review_submissions` and `provider_attempts` remain the operational
+  accounting record and are not part of the content-retention cascade.
+- Correction and start JSON bodies share a 16 KiB transport limit. Oversized JSON receives the
+  bounded `batch_request_too_large` response; preflight and image replacement retain their
+  package- and image-specific 413 issue contracts.
+- Uploaded XLSX workbooks keep their neutral, unpredictable spool filenames. After archive checks,
+  the parser opens the workbook from its bounded binary stream so the spreadsheet library does not
+  mistake the safe `.upload` suffix for an unsupported workbook type.
+- The offline 25-case regression deliberately includes passing, mismatching, unreadable, and failed
+  cases. Two workers are observed, an early case failure does not prevent later completion, and no
+  provider network access is used.
+- Restart regression uses a real partially completed lifecycle rather than replaying fabricated
+  state. The completed result remains readable, uncertain cases and reservations become
+  `interrupted`, and a new service instance creates no additional attempt.
+- The shared durable usage gate distinguishes normal context completion from cancellation. An
+  unsettled reservation on a normal exit remains an `internal_failure`; any non-normal exit or
+  cancellation race settles conservatively as `interrupted` before restart reconciliation.
+- The P1 package fixture matrix is generated during tests instead of committing reproducible binary
+  packages. Paired CSV/XLSX packages cover 2, 5, and 25 valid cases; generated preflight cases cover
+  missing, extra, duplicate, Unicode, ambiguous, invalid, corrupt, and over-limit inputs.
+- Integrated logging tests use sentinel workbook, filename, expected, extracted, and source-address
+  values and assert that none enter application logs or either operational usage table.
 
 ## API contract
 

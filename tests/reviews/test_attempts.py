@@ -1,5 +1,6 @@
 import asyncio
 import sqlite3
+from contextlib import suppress
 from decimal import Decimal
 from pathlib import Path
 
@@ -179,6 +180,44 @@ def test_retry_has_a_separate_reservation_and_is_bounded_at_two(tmp_path: Path) 
             """
         ).fetchall()
     assert rows == [(1, "failed", "transient_failure"), (2, "succeeded", None)]
+
+
+def test_cancellation_while_reserved_is_conservatively_settled_as_interrupted(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "usage.sqlite3"
+    initialize_database(database_path)
+    gate = make_gate(database_path)
+
+    async def run() -> None:
+        entered = asyncio.Event()
+
+        async def hold_reservation() -> None:
+            async with (
+                gate.internal_submission(
+                    correlation_id="cancelled-reservation",
+                    idempotency_key="cancelled-reservation-key",
+                ) as submission,
+                submission.reserve_attempt(),
+            ):
+                entered.set()
+                await asyncio.Event().wait()
+
+        task = asyncio.create_task(hold_reservation())
+        await entered.wait()
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+    asyncio.run(run())
+
+    with connect(database_path) as connection:
+        assert connection.execute(
+            "SELECT status, error_kind FROM review_submissions"
+        ).fetchone() == ("failed", "interrupted")
+        assert connection.execute(
+            "SELECT status, error_kind FROM provider_attempts"
+        ).fetchone() == ("failed", "interrupted")
 
 
 def test_concurrent_reservations_cannot_exceed_cumulative_ceiling(tmp_path: Path) -> None:

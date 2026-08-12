@@ -283,6 +283,71 @@ def test_periodic_cleanup_preserves_an_unexpired_processing_image(tmp_path: Path
     asyncio.run(run())
 
 
+def test_periodic_cleanup_retries_terminal_image_deletion_with_safe_bookkeeping(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    clock = MutableClock(datetime(2026, 8, 12, 12, tzinfo=UTC))
+    service = make_service(tmp_path, clock)
+
+    async def run() -> None:
+        draft = await create_draft(
+            service,
+            [["APP-1", "label.png", "Brand", "Bourbon", "45", "750 mL"]],
+            [upload(png_bytes(), filename="label.png")],
+        )
+        stored = next(service.image_dir.iterdir())
+        with connect(service.database_path) as connection:
+            connection.execute(
+                "UPDATE batch_reviews SET status = 'processing' WHERE batch_id = ?",
+                (str(draft.batch_id),),
+            )
+            connection.execute(
+                "UPDATE batch_cases SET status = 'failed', safe_failure_reason = 'Safe failure' "
+                "WHERE batch_id = ?",
+                (str(draft.batch_id),),
+            )
+            connection.execute(
+                "UPDATE batch_images SET status = 'processing' WHERE batch_id = ?",
+                (str(draft.batch_id),),
+            )
+
+        original_unlink = Path.unlink
+        fail_once = True
+
+        def flaky_unlink(path: Path, *, missing_ok: bool = False) -> None:
+            nonlocal fail_once
+            if path == stored and fail_once:
+                fail_once = False
+                raise OSError("simulated deletion failure")
+            original_unlink(path, missing_ok=missing_ok)
+
+        monkeypatch.setattr(Path, "unlink", flaky_unlink)
+        first = await service.cleanup_expired_and_orphaned()
+        assert first.deleted_file_count == 0
+        assert first.failed_file_count == 1
+        assert stored.is_file()
+        with connect(service.database_path) as connection:
+            assert connection.execute(
+                "SELECT status, cleanup_attempts, cleanup_last_error_kind "
+                "FROM batch_images WHERE batch_id = ?",
+                (str(draft.batch_id),),
+            ).fetchone() == ("processing", 1, "os_error")
+
+        second = await service.cleanup_expired_and_orphaned()
+        assert second.deleted_file_count == 1
+        assert second.failed_file_count == 0
+        assert not stored.exists()
+        with connect(service.database_path) as connection:
+            assert connection.execute(
+                "SELECT status, cleanup_attempts, cleanup_last_error_kind, deleted_at "
+                "FROM batch_images WHERE batch_id = ?",
+                (str(draft.batch_id),),
+            ).fetchone() == ("deleted", 2, None, clock.value.isoformat())
+
+    asyncio.run(run())
+
+
 def test_startup_and_periodic_cleanup_enforce_expiry(tmp_path: Path) -> None:
     clock = MutableClock(datetime(2026, 8, 12, 12, tzinfo=UTC))
     creator = make_service(tmp_path, clock)

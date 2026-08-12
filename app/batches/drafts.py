@@ -648,6 +648,7 @@ class BatchDraftService:
     def _cleanup_expired_and_orphaned(self, now: datetime) -> DraftCleanupResult:
         self._prepare_image_dir()
         with connect(self.database_path) as connection:
+            connection.row_factory = sqlite3.Row
             connection.execute("BEGIN IMMEDIATE")
             expired_batch_count = connection.execute(
                 "SELECT COUNT(*) FROM batch_reviews WHERE expires_at <= ?",
@@ -658,13 +659,31 @@ class BatchDraftService:
                 (_iso(now),),
             )
             live_storage_keys = {
-                row[0]
+                row["storage_key"]
                 for row in connection.execute(
                     """
                     SELECT i.storage_key
                     FROM batch_images AS i
                     JOIN batch_reviews AS b ON b.batch_id = i.batch_id
-                    WHERE i.status IN ('available', 'processing') AND b.expires_at > ?
+                    LEFT JOIN batch_cases AS c ON c.image_id = i.image_id
+                    WHERE b.expires_at > ? AND (
+                        i.status = 'available'
+                        OR (i.status = 'processing' AND c.status = 'processing')
+                    )
+                    """,
+                    (_iso(now),),
+                )
+            }
+            retry_storage_keys = {
+                row["storage_key"]
+                for row in connection.execute(
+                    """
+                    SELECT i.storage_key
+                    FROM batch_images AS i
+                    JOIN batch_reviews AS b ON b.batch_id = i.batch_id
+                    JOIN batch_cases AS c ON c.image_id = i.image_id
+                    WHERE b.expires_at > ? AND i.status = 'processing'
+                      AND c.status IN ('completed', 'failed', 'interrupted')
                     """,
                     (_iso(now),),
                 )
@@ -672,14 +691,62 @@ class BatchDraftService:
 
         deleted_file_count = 0
         failed_file_count = 0
+        retry_results: dict[str, str | None] = {}
+        for storage_key in retry_storage_keys:
+            try:
+                path = self._storage_path(storage_key)
+            except RuntimeError:
+                retry_results[storage_key] = "invalid_storage_key"
+                failed_file_count += 1
+                continue
+            existed = path.exists() or path.is_symlink()
+            try:
+                path.unlink(missing_ok=True)
+                retry_results[storage_key] = None
+                if existed:
+                    deleted_file_count += 1
+            except OSError:
+                retry_results[storage_key] = "os_error"
+                failed_file_count += 1
+
         for path in self.image_dir.iterdir():
-            if path.name in live_storage_keys or (not path.is_file() and not path.is_symlink()):
+            if (
+                path.name in live_storage_keys
+                or path.name in retry_storage_keys
+                or (not path.is_file() and not path.is_symlink())
+            ):
                 continue
             try:
                 path.unlink(missing_ok=True)
                 deleted_file_count += 1
             except OSError:
                 failed_file_count += 1
+
+        if retry_results:
+            with connect(self.database_path) as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                for storage_key, error_kind in retry_results.items():
+                    if error_kind is None:
+                        connection.execute(
+                            """
+                            UPDATE batch_images
+                            SET status = 'deleted', deleted_at = ?,
+                                cleanup_attempts = cleanup_attempts + 1,
+                                cleanup_last_attempted_at = ?, cleanup_last_error_kind = NULL
+                            WHERE storage_key = ? AND status = 'processing'
+                            """,
+                            (_iso(now), _iso(now), storage_key),
+                        )
+                    else:
+                        connection.execute(
+                            """
+                            UPDATE batch_images
+                            SET cleanup_attempts = cleanup_attempts + 1,
+                                cleanup_last_attempted_at = ?, cleanup_last_error_kind = ?
+                            WHERE storage_key = ? AND status = 'processing'
+                            """,
+                            (_iso(now), error_kind, storage_key),
+                        )
         return DraftCleanupResult(
             expired_batch_count=expired_batch_count,
             deleted_file_count=deleted_file_count,
