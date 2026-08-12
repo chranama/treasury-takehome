@@ -17,6 +17,7 @@ def make_settings(tmp_path: Path, **overrides: object) -> Settings:
         "app_env": "test",
         "database_path": tmp_path / "treasury.sqlite3",
         "temp_dir": tmp_path / "tmp",
+        "batch_image_dir": tmp_path / "batch-images",
         "frontend_dist_path": tmp_path / "dist",
         "extraction_backend": "fake",
         "live_extraction_enabled": False,
@@ -43,6 +44,8 @@ def test_health_and_readiness_initialize_local_state(tmp_path: Path) -> None:
     }
     assert settings.database_path.is_file()
     assert settings.temp_dir.is_dir()
+    assert settings.batch_image_dir.is_dir()
+    assert list(settings.batch_image_dir.iterdir()) == []
 
 
 def test_readiness_reports_missing_openai_configuration_without_provider_call(
@@ -174,3 +177,30 @@ def test_compiled_frontend_prevents_edge_injection_and_remote_runtime_access(
     assert asset_response.status_code == 200
     assert asset_response.headers["x-content-type-options"] == "nosniff"
     assert "content-security-policy" not in asset_response.headers
+
+
+def test_built_frontend_serves_root_and_refresh_safe_batch_page(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    settings.frontend_dist_path.mkdir()
+    (settings.frontend_dist_path / "index.html").write_text(
+        "<!doctype html><title>Label Review</title>",
+        encoding="utf-8",
+    )
+
+    with TestClient(create_app(settings)) as client:
+        root = client.get("/")
+        batch = client.get("/batch?batch=718117a6-8284-4946-8d65-7af8c333340c")
+
+    assert root.status_code == 200
+    assert batch.status_code == 200
+    assert root.text == batch.text
+    assert batch.headers["cache-control"] == HTML_CACHE_CONTROL
+    assert batch.headers["content-security-policy"] == HTML_CONTENT_SECURITY_POLICY
+    assert batch.headers["x-content-type-options"] == "nosniff"
+    assert batch.headers["referrer-policy"] == "no-referrer"
+
+
+def test_p1_2_does_not_expose_a_batch_collection_endpoint(tmp_path: Path) -> None:
+    application = create_app(make_settings(tmp_path))
+
+    assert all(getattr(route, "path", None) != "/api/batches" for route in application.routes)

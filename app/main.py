@@ -1,17 +1,23 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
+from app.api.batches import router as batches_router
 from app.api.correlation import CorrelationIdMiddleware
 from app.api.errors import install_exception_handlers
 from app.api.request_limits import (
+    BATCH_CORRECTION_BODY_BYTES,
+    BATCH_PREFLIGHT_MULTIPART_OVERHEAD_BYTES,
     SINGLE_REVIEW_MULTIPART_OVERHEAD_BYTES,
     RequestBodyLimitMiddleware,
 )
 from app.api.reviews import router as reviews_router
 from app.api.system import router as system_router
+from app.batches.drafts import BatchDraftService
+from app.batches.limits import MAX_AGGREGATE_UPLOAD_BYTES
+from app.batches.processing import BatchProcessingService
 from app.config import Settings, get_settings
 from app.db import initialize_database
 from app.extraction import (
@@ -34,6 +40,12 @@ def create_app(
     resolved_settings = settings or get_settings()
     resolved_adapter = extraction_adapter
     resolved_attempt_gate = attempt_gate
+    batch_draft_service = BatchDraftService(
+        database_path=resolved_settings.database_path,
+        image_dir=resolved_settings.batch_image_dir,
+        temp_dir=resolved_settings.temp_dir,
+        cleanup_interval_seconds=resolved_settings.batch_cleanup_interval_seconds,
+    )
     owned_openai_adapter: OpenAIExtractionAdapter | None = None
     if resolved_settings.extraction_backend == "fake":
         resolved_adapter = resolved_adapter or create_extraction_adapter(resolved_settings)
@@ -64,15 +76,30 @@ def create_app(
                 max_attempts_per_submission=resolved_settings.openai_transient_retries + 1,
             )
 
+    review_service = ReviewService(
+        settings=resolved_settings,
+        adapter=resolved_adapter,
+        attempt_gate=resolved_attempt_gate,
+    )
+    batch_processing_service = BatchProcessingService(
+        database_path=resolved_settings.database_path,
+        image_dir=resolved_settings.batch_image_dir,
+        review_service=review_service,
+    )
+
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
-        resolved_settings.prepare_local_directories()
-        initialize_database(resolved_settings.database_path)
-        if isinstance(resolved_attempt_gate, SQLiteUsageGate):
-            await resolved_attempt_gate.reconcile_incomplete()
         try:
+            resolved_settings.prepare_local_directories()
+            initialize_database(resolved_settings.database_path)
+            await batch_draft_service.start()
+            if isinstance(resolved_attempt_gate, SQLiteUsageGate):
+                await resolved_attempt_gate.reconcile_incomplete()
+            await batch_processing_service.start()
             yield
         finally:
+            await batch_processing_service.aclose()
+            await batch_draft_service.aclose()
             if owned_openai_adapter is not None:
                 await owned_openai_adapter.aclose()
 
@@ -88,25 +115,44 @@ def create_app(
         path_limits={
             "/api/reviews": (
                 DEFAULT_IMAGE_LIMITS.max_upload_bytes + SINGLE_REVIEW_MULTIPART_OVERHEAD_BYTES
-            )
+            ),
+            "/api/batches/preflight": (
+                MAX_AGGREGATE_UPLOAD_BYTES + BATCH_PREFLIGHT_MULTIPART_OVERHEAD_BYTES
+            ),
+        },
+        path_pattern_limits={
+            r"/api/batches/[^/]+/cases/[^/]+": BATCH_CORRECTION_BODY_BYTES,
+            r"/api/batches/[^/]+/cases/[^/]+/image": (
+                DEFAULT_IMAGE_LIMITS.max_upload_bytes + SINGLE_REVIEW_MULTIPART_OVERHEAD_BYTES
+            ),
+            r"/api/batches/[^/]+/start": BATCH_CORRECTION_BODY_BYTES,
         },
     )
     application.add_middleware(CorrelationIdMiddleware)
     install_exception_handlers(application)
     application.state.settings = resolved_settings
-    application.state.review_service = ReviewService(
-        settings=resolved_settings,
-        adapter=resolved_adapter,
-        attempt_gate=resolved_attempt_gate,
-    )
+    application.state.batch_draft_service = batch_draft_service
+    application.state.batch_processing_service = batch_processing_service
+    application.state.review_service = review_service
     application.include_router(system_router)
     application.include_router(reviews_router)
+    application.include_router(batches_router)
 
     frontend_index = resolved_settings.frontend_dist_path / "index.html"
     if frontend_index.is_file():
+        frontend_files = FrontendStaticFiles(
+            directory=resolved_settings.frontend_dist_path,
+            html=True,
+        )
+
+        @application.get("/batch", include_in_schema=False)
+        @application.get("/batch/", include_in_schema=False)
+        async def batch_frontend(request: Request) -> Response:
+            return await frontend_files.get_response("index.html", request.scope)
+
         application.mount(
             "/",
-            FrontendStaticFiles(directory=resolved_settings.frontend_dist_path, html=True),
+            frontend_files,
             name="frontend",
         )
     else:

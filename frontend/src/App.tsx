@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { BatchWorkflow } from './BatchWorkflow'
 import { submitReview, ReviewRequestError } from './reviewApi'
 import { ReviewForm } from './ReviewForm'
 import {
@@ -11,6 +12,7 @@ import {
 import type { ApiErrorResponse, ReviewResponse, ReviewSubmission } from './reviewTypes'
 
 function App() {
+  const batchPage = window.location.pathname === '/batch' || window.location.pathname === '/batch/'
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [result, setResult] = useState<ReviewResponse | null>(null)
   const [error, setError] = useState<ApiErrorResponse | null>(null)
@@ -63,20 +65,41 @@ function App() {
           </p>
         </section>
 
-        <div className="workflow-layout">
-          <ReviewForm isSubmitting={isSubmitting} onSubmit={handleSubmit} />
-          <div className="results-column">
-            {isSubmitting ? (
-              <ProcessingResults />
-            ) : error ? (
-              <ReviewFailure error={error} />
-            ) : result ? (
-              <ReviewResults result={result} />
-            ) : (
-              <EmptyResults />
-            )}
+        <nav className="workflow-switcher" aria-label="Review workflow">
+          <a
+            className={!batchPage ? 'active' : ''}
+            href="/"
+            aria-current={!batchPage ? 'page' : undefined}
+          >
+            Single label
+          </a>
+          <a
+            className={batchPage ? 'active' : ''}
+            href="/batch"
+            aria-current={batchPage ? 'page' : undefined}
+          >
+            Batch review
+          </a>
+        </nav>
+
+        {batchPage ? (
+          <BatchWorkflow />
+        ) : (
+          <div className="workflow-layout">
+            <ReviewForm isSubmitting={isSubmitting} onSubmit={handleSubmit} />
+            <div className="results-column">
+              {isSubmitting ? (
+                <ProcessingResults />
+              ) : error ? (
+                <ReviewFailure error={error} />
+              ) : result ? (
+                <ReviewResults result={result} />
+              ) : (
+                <EmptyResults />
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
       <footer>

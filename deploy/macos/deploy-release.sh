@@ -15,6 +15,7 @@ local_output=""
 remote_stage=""
 previous_commit=""
 activated=0
+disable_live_during_deploy=0
 
 fail() {
   printf 'deploy-release: %s\n' "$*" >&2
@@ -70,9 +71,14 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
-[ "${1:-}" = "--confirm-no-active-reviews" ] && [ "$#" -eq 1 ] || {
-  fail "usage: deploy-release.sh --confirm-no-active-reviews"
+[ "${1:-}" = "--confirm-no-active-reviews" ] || {
+  fail "usage: deploy-release.sh --confirm-no-active-reviews [--disable-live-during-deploy]"
 }
+case "$#:${2:-}" in
+  1:) ;;
+  2:--disable-live-during-deploy) disable_live_during_deploy=1 ;;
+  *) fail "usage: deploy-release.sh --confirm-no-active-reviews [--disable-live-during-deploy]" ;;
+esac
 
 for command_name in git ssh scp; do
   command -v "$command_name" >/dev/null 2>&1 || fail "missing required command: $command_name"
@@ -114,9 +120,11 @@ local_output=$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/treasury-deploy-release.XXXXX
 archive="$local_output/treasury-takehome-$commit.tar.gz"
 checksum="$archive.sha256"
 installer="$PROJECT_ROOT/deploy/macos/install-release.sh"
+live_switch="$PROJECT_ROOT/deploy/macos/set-live-extraction.sh"
 [ -f "$archive" ] || fail "release builder did not produce the expected archive"
 [ -f "$checksum" ] || fail "release builder did not produce the expected checksum"
 [ -x "$installer" ] || fail "release installer is missing or not executable"
+[ -x "$live_switch" ] || fail "live-extraction switch is missing or not executable"
 
 remote_stage=$(
   ssh "$REMOTE_HOST" /usr/bin/mktemp -d "/Users/chranama-server/.treasury-deploy.XXXXXX"
@@ -127,11 +135,16 @@ case "$stage_suffix" in
 esac
 ssh "$REMOTE_HOST" /bin/chmod 700 "$remote_stage"
 
-scp "$archive" "$checksum" "$installer" "$REMOTE_HOST:$remote_stage/"
+scp "$archive" "$checksum" "$installer" "$live_switch" "$REMOTE_HOST:$remote_stage/"
 
 archive_name=$(basename "$archive")
 checksum_name=$(basename "$checksum")
 ssh "$REMOTE_HOST" /bin/chmod 700 "$remote_stage/install-release.sh"
+ssh "$REMOTE_HOST" /bin/chmod 700 "$remote_stage/set-live-extraction.sh"
+if [ "$disable_live_during_deploy" -eq 1 ]; then
+  ssh "$REMOTE_HOST" "$remote_stage/set-live-extraction.sh" \
+    --disable --confirm-no-active-reviews
+fi
 ssh "$REMOTE_HOST" "$remote_stage/install-release.sh" \
   "$remote_stage/$archive_name" "$remote_stage/$checksum_name"
 activated=1
@@ -148,3 +161,6 @@ ssh "$REMOTE_HOST" "$REMOTE_CURRENT/deploy/macos/check-service.sh" local
 
 printf 'Deployed commit %s to %s; local health and readiness passed.\n' \
   "$commit" "$REMOTE_HOST"
+if [ "$disable_live_during_deploy" -eq 1 ]; then
+  printf 'Live extraction remains disabled pending explicit smoke validation.\n'
+fi

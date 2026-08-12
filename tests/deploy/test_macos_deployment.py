@@ -26,6 +26,7 @@ SHELL_ASSETS = [
     "preflight-host.sh",
     "restart-service.sh",
     "rollback-release.sh",
+    "set-live-extraction.sh",
     "start-label-review.sh",
 ]
 
@@ -114,6 +115,9 @@ def test_manual_deployment_orchestrator_is_deliberate_and_commit_attributed() ->
     assert "/usr/bin/mktemp -d" in content
     assert 'scp "$archive" "$checksum" "$installer"' in content
     assert 'install-release.sh" \\' in content
+    assert "--disable-live-during-deploy" in content
+    assert 'set-live-extraction.sh" \\' in content
+    assert "--disable --confirm-no-active-reviews" in content
     assert 'restart-service.sh" \\' in content
     assert '"$active_commit" = "$commit"' in content
     assert 'check-service.sh" local' in content
@@ -122,6 +126,31 @@ def test_manual_deployment_orchestrator_is_deliberate_and_commit_attributed() ->
     assert "Automatic rollback was not attempted" in content
     assert "git pull" not in content
     assert "git clone" not in content
+
+
+def test_live_extraction_switch_is_confirmation_gated_and_reversible() -> None:
+    path = DEPLOY_ROOT / "set-live-extraction.sh"
+    content = path.read_text(encoding="utf-8")
+
+    unconfirmed = subprocess.run(
+        [str(path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert unconfirmed.returncode != 0
+    assert "--disable --confirm-no-active-reviews" in unconfirmed.stderr
+    assert "--enable --confirm-p1-smoke-complete" in unconfirmed.stderr
+
+    assert "TREASURY_LIVE_EXTRACTION_ENABLED=" in content
+    assert '"$ENV_FILE" || true' in content
+    assert "stat -f '%OLp' \"$ENV_FILE\"" in content
+    assert 'chmod 600 "$next_file"' in content
+    assert 'restart-service.sh" --confirm-no-active-reviews' in content
+    assert 'check-service.sh" local' in content
+    assert 'cp "$rollback_file" "$ENV_FILE.restore"' in content
+    assert 'rm -f -- "$rollback_file"' in content
+    assert "sudo" not in content
 
 
 def test_cloudflare_route_activation_preserves_mealcheck_and_has_rollback() -> None:
@@ -251,6 +280,7 @@ def test_start_wrapper_resolves_current_to_one_immutable_release() -> None:
     content = (DEPLOY_ROOT / "start-label-review.sh").read_text(encoding="utf-8")
     assert 'RELEASE_DIR=$(cd "$CURRENT_RELEASE" && pwd -P)' in content
     assert 'TREASURY_FRONTEND_DIST_PATH="$RELEASE_DIR/frontend/dist"' in content
+    assert 'TREASURY_BATCH_IMAGE_DIR="$DATA_ROOT/batch-images"' in content
     assert 'exec "$RELEASE_DIR/.venv/bin/python"' in content
 
 
@@ -330,3 +360,4 @@ def test_install_and_explicit_rollback_switch_immutable_releases(tmp_path: Path)
     assert (app_root / "current").resolve() == app_root / "releases" / first
     assert (app_root / "releases" / second).is_dir()
     assert (data_root / "config").stat().st_mode & 0o777 == 0o700
+    assert (data_root / "batch-images").stat().st_mode & 0o777 == 0o700

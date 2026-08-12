@@ -1,6 +1,6 @@
 # Implementation Approach
 
-**Status:** P0 implementation and provider evaluation complete; public deployment validation in progress
+**Status:** P0 deployed and validated; P1 implemented with public rollout pending
 **Last updated:** 2026-08-12
 
 ## Approach
@@ -67,6 +67,11 @@ P1 accepts an XLSX workbook or UTF-8 CSV plus multiple label images. ZIP input i
 The backend creates a short-lived preflight draft that identifies invalid rows, missing or duplicate images, duplicate application IDs, unsupported files, and batches over 25 cases. The reviewer can correct expected values or replace image associations before starting the ready cases.
 
 Started batches run as short-lived background jobs. The browser polls for progress; WebSockets and server-sent events are unnecessary for this bounded prototype. Every case uses the P0 extraction and comparison pipeline independently, so one case failure does not fail the batch. A browser-generated idempotency key prevents a repeated start request from creating duplicate provider calls.
+
+P1 advances SQLite from schema version 1 to version 2 through an additive, idempotent migration.
+Because the P0 binary does not preserve schema version 2 or clean P1 content, the first P1 rollout
+is a forward-only transition: a deployment problem is handled with a tested forward fix rather
+than by restarting the P0 binary against the migrated database.
 
 ## Extraction and comparison boundary
 
@@ -149,9 +154,9 @@ The test strategy has four layers:
 1. unit tests for normalization, proof conversion, unit conversion, warning comparison, ambiguity, and status aggregation;
 2. backend integration tests for validation, APIs, SQLite reservations, idempotency, batch isolation, and error mapping with a fixed extraction adapter;
 3. frontend and browser tests for form behavior, preflight correction, progress, filtering, downloads, and accessibility basics; and
-4. an explicitly invoked live-provider evaluation over synthetic fixtures.
+4. an explicitly invoked P0 live-provider evaluation over synthetic fixtures.
 
-Ordinary automated tests make no external model calls. The live evaluation records its model, image-detail setting, fixture set, correctness, uncertainty handling, malformed-response rate, latency, token usage, and estimated cost.
+Ordinary automated tests make no external model calls. The P0 live evaluation records its model, image-detail setting, fixture set, correctness, uncertainty handling, malformed-response rate, latency, token usage, and estimated cost.
 
 On August 11, 2026, three unchanged `gpt-5.6-luna` runs at `high` detail passed all 12 versioned synthetic cases with no malformed responses or retries. The clear label passed all five checks; the known net-contents and warning alterations were detected every time; and the unreadable fixture produced uncertainty without fabricated text. Median latency was 2.70 seconds and the slowest request was 8.55 seconds. Estimated per-case cost was $0.000360 at the median and $0.000903 at the nearest-rank 95th percentile under pricing checked that day. These results support a prototype baseline only; the fixture set is small and synthetic, and the latency outlier still requires deployed-path validation.
 
@@ -162,6 +167,23 @@ The versioned live fixture manifest defines four deterministic synthetic cases: 
 The accepted `live-evaluation-v1` manifest remains frozen for historical attribution. Expanded fixture suites will use the strict v2 contract described in [Fixture Coverage and Manifest Contract](fixture-coverage.md), with explicit suite ownership, evaluation layers, observation requirements, complete deterministic outcomes, uncertainty policy, renderer identity, and artifact hashes.
 
 Raw evaluation evidence remains local and gitignored because it contains diagnostic observations and provider request identifiers. Hosted extraction remains disabled by default and cannot become ready until the API key and all private usage-control settings are present.
+
+When live extraction is disabled, P1 preflight drafts and existing results remain available, but
+starting a batch is rejected before it can be queued. This supports a maintenance window without
+turning every case into a failed provider attempt.
+
+The implemented P1 workflow applies this same extraction boundary independently to as many as 25
+ready cases. It adds bounded CSV/XLSX preflight, short-lived corrections and image associations,
+idempotent background start, global concurrency two, refresh-safe polling and case detail, safe CSV
+export, immediate deletion of processed images, and deletion of unused content within 24 hours.
+Fixed-response regression covers mixed 25-case execution, independent failures, restart
+interruption without replay, request limits, content-free operational records, cleanup, and the
+two-page single/batch browser workflow. The bounded P1 live-provider batch is deliberately deferred
+to the deployment plan so it measures the merged, attributable release through the deployed path.
+
+P1 does not add authentication, reviewer accounts or roles, audit history, durable cross-process
+queue resume, official COLAs Online integration, automatic approval or rejection, long-term result
+history, or evidence of production throughput for 200-300-application stakeholder batches.
 
 A deployed smoke test will complete the P0 happy path in a current desktop browser and verify that browser runtime requests do not depend on third-party asset, model, storage, analytics, telemetry, or authentication domains.
 

@@ -15,9 +15,10 @@ These assets deploy the label-review prototype as one native Uvicorn process on 
 | Protected environment | `treasury-takehome-data/config/treasury.env` |
 | Database | `treasury-takehome-data/db/treasury.sqlite3` |
 | Temporary images | `treasury-takehome-data/tmp` |
+| Short-lived P1 images | `treasury-takehome-data/batch-images` |
 | Logs | `treasury-takehome-data/logs` |
 
-The application root contains immutable `releases/<full-commit>` directories and an atomically replaced `current` symlink. The start wrapper resolves that link once and gives the process immutable code and frontend paths, so activating a release cannot mix a new frontend with the still-running old backend. SQLite, temporary images, logs, and secrets remain outside every release. The immediately previous compatible release is retained for rollback.
+The application root contains immutable `releases/<full-commit>` directories and an atomically replaced `current` symlink. The start wrapper resolves that link once and gives the process immutable code and frontend paths, so activating a release cannot mix a new frontend with the still-running old backend. SQLite, temporary and short-lived batch images, logs, and secrets remain outside every release. The immediately previous compatible release is retained for rollback.
 
 ## Files
 
@@ -30,6 +31,7 @@ The application root contains immutable `releases/<full-commit>` directories and
 - `install-service.sh` validates the active release and protected configuration, then installs and loads the one-time system LaunchDaemon without replacing an existing service.
 - `restart-service.sh` requires confirmation that no review is active, then asks launchd to replace the account-owned process and verifies its release, listener, health, and readiness.
 - `rollback-release.sh` activates an already installed, schema-compatible release without changing SQLite or restarting the service.
+- `set-live-extraction.sh` atomically disables or enables new paid work, restarts the service, and restores the prior protected setting if validation fails.
 - `start-label-review.sh` validates the protected environment, fixes production paths, and starts the selected release.
 - `run_server.py` fixes the single-process listener and provides bounded runtime logging without request access logs.
 - `dev.mealcheck.label-review.plist.template` is the reviewed system LaunchDaemon definition.
@@ -68,6 +70,25 @@ checksum, and installer, activates the immutable release, and invokes the existi
 restart. It succeeds only when the server reports the exact local commit and passes localhost
 health and readiness checks. Local and remote staging files are removed when the command exits.
 
+For a schema transition such as the first P1 deployment, keep paid work disabled after activation:
+
+```bash
+deploy/macos/deploy-release.sh \
+  --confirm-no-active-reviews \
+  --disable-live-during-deploy
+```
+
+This mode transfers the guarded live-extraction switch, disables new paid starts before release
+activation, and leaves extraction disabled after the new process passes local readiness. It does
+not replace the operator's obligation to confirm that no P0 request or P1 job is active. After the
+P0 regression and P1 preflight gates pass, re-enable starts from the server only after explicitly
+accepting that the bounded paid smoke is ready:
+
+```bash
+/Users/chranama-server/treasury-takehome/current/deploy/macos/set-live-extraction.sh \
+  --enable --confirm-p1-smoke-complete
+```
+
 The server does not clone or pull the repository and receives no GitHub credential. Pushing
 `main` does not deploy it; running this command is the explicit release decision. If a check fails
 after activation, the command reports the previous commit and inspection steps but does not
@@ -86,7 +107,7 @@ deploy/macos/install-release.sh \
 
 Installation creates protected data directories, verifies the artifact, installs Python 3.12 and locked production dependencies with the server's x86_64 `uv`, and changes `current`. It does not install the plist, edit Cloudflare, restart launchd, or enable live extraction.
 
-Copy `treasury.env.example` to the protected environment path, replace placeholders privately, and set mode 600. Begin with live extraction disabled. The wrapper supplies production mode and the database, temporary, frontend, and log paths; those values do not belong in the protected file.
+Copy `treasury.env.example` to the protected environment path, replace placeholders privately, and set mode 600. Begin with live extraction disabled. The wrapper supplies production mode and the database, temporary, short-lived batch-image, frontend, and log paths; those values do not belong in the protected file.
 
 Install the system service only after one release and the protected data directory exist. The
 installer requires administrator authorization, refuses an existing plist or loaded service, and
@@ -148,6 +169,10 @@ The script changes only `current`. After checking the selected commit, current d
 and active workload, restart with `restart-service.sh --confirm-no-active-reviews`. Never restore
 an older SQLite copy as an application rollback.
 
+The P1 migration advances the database from schema version 1 to version 2 by adding tables. The
+P0 release does not safely preserve that version or clean P1 content, so the first P1 migration is
+a forward-only transition: use a tested forward fix rather than selecting the P0 binary afterward.
+
 ## Cloudflare route
 
 The host runs its named tunnel through the system service `dev.mealcheck.tunnel`, using `/Users/chranama-server/.cloudflared/mealcheck-api.yml`. The application reuses that process with one additive ingress immediately before the existing catch-all:
@@ -172,5 +197,5 @@ Cloudflare Web Analytics can inject a browser beacon into proxied HTML. The appl
 - Do not silently replace unavailable live extraction with fake results.
 
 The process runs as the existing `chranama-server` account. Its configured database, temporary,
-and log writes are confined to the Treasury data root, but this is not an operating-system sandbox
+batch-image, and log writes are confined to the Treasury data root, but this is not an operating-system sandbox
 from other files owned by that account.

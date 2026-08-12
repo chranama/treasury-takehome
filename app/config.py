@@ -7,6 +7,7 @@ from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_BATCH_CLEANUP_INTERVAL_SECONDS = 300
 
 
 class Settings(BaseSettings):
@@ -22,6 +23,10 @@ class Settings(BaseSettings):
     app_env: Literal["development", "test", "production"] = "development"
     database_path: Path = PROJECT_ROOT / ".data" / "treasury.sqlite3"
     temp_dir: Path = PROJECT_ROOT / ".data" / "tmp"
+    batch_image_dir: Path = PROJECT_ROOT / ".data" / "batch-images"
+    batch_cleanup_interval_seconds: Annotated[
+        int, Field(ge=1, le=DEFAULT_BATCH_CLEANUP_INTERVAL_SECONDS)
+    ] = DEFAULT_BATCH_CLEANUP_INTERVAL_SECONDS
     frontend_dist_path: Path = PROJECT_ROOT / "frontend" / "dist"
 
     extraction_backend: Literal["fake", "openai"] = "fake"
@@ -42,7 +47,13 @@ class Settings(BaseSettings):
     live_source_max_submissions: Annotated[int | None, Field(ge=1)] = None
     trust_cloudflare_client_ip: bool = False
 
-    @field_validator("database_path", "temp_dir", "frontend_dist_path", mode="after")
+    @field_validator(
+        "database_path",
+        "temp_dir",
+        "batch_image_dir",
+        "frontend_dist_path",
+        mode="after",
+    )
     @classmethod
     def resolve_project_path(cls, value: Path) -> Path:
         return value if value.is_absolute() else (PROJECT_ROOT / value).resolve()
@@ -58,6 +69,8 @@ class Settings(BaseSettings):
     def prepare_local_directories(self) -> None:
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
+        self.batch_image_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self.batch_image_dir.chmod(0o700)
 
     def provider_configuration_issues(self) -> list[str]:
         issues: list[str] = []

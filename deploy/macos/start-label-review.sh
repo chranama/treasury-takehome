@@ -73,6 +73,7 @@ set +a
 export TREASURY_APP_ENV=production
 export TREASURY_DATABASE_PATH="$DATA_ROOT/db/treasury.sqlite3"
 export TREASURY_TEMP_DIR="$DATA_ROOT/tmp"
+export TREASURY_BATCH_IMAGE_DIR="$DATA_ROOT/batch-images"
 export TREASURY_FRONTEND_DIST_PATH="$RELEASE_DIR/frontend/dist"
 export TREASURY_LOG_DIR="$LOG_DIR"
 

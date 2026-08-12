@@ -41,8 +41,12 @@ while IFS= read -r entry; do
 done < <(/usr/bin/tar -tzf "$ARCHIVE")
 
 /bin/mkdir -p "$APP_ROOT/releases"
-/bin/mkdir -p "$DATA_ROOT/config" "$DATA_ROOT/db" "$DATA_ROOT/tmp" "$DATA_ROOT/logs"
-/bin/chmod 700 "$DATA_ROOT" "$DATA_ROOT/config" "$DATA_ROOT/db" "$DATA_ROOT/tmp" "$DATA_ROOT/logs"
+/bin/mkdir -p \
+  "$DATA_ROOT/config" "$DATA_ROOT/db" "$DATA_ROOT/tmp" "$DATA_ROOT/batch-images" \
+  "$DATA_ROOT/logs"
+/bin/chmod 700 \
+  "$DATA_ROOT" "$DATA_ROOT/config" "$DATA_ROOT/db" "$DATA_ROOT/tmp" \
+  "$DATA_ROOT/batch-images" "$DATA_ROOT/logs"
 
 staging=$(/usr/bin/mktemp -d "$APP_ROOT/releases/.incoming.XXXXXX")
 release_dir=""
