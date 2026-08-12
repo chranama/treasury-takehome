@@ -103,6 +103,23 @@ def test_noncompleted_case_cannot_claim_an_outcome() -> None:
         case_summary(state=BatchCaseState.FAILED, outcome="needs_review")
 
 
+def test_terminal_case_summaries_require_bounded_reasons() -> None:
+    completed = case_summary(
+        state=BatchCaseState.COMPLETED,
+        outcome="all_checks_passed",
+        short_reason="All five checks matched.",
+    )
+    failed = case_summary(
+        state=BatchCaseState.FAILED,
+        short_reason="Live review capacity is temporarily unavailable.",
+    )
+
+    assert completed.short_reason == "All five checks matched."
+    assert failed.outcome is None
+    with pytest.raises(ValidationError):
+        case_summary(state=BatchCaseState.INTERRUPTED)
+
+
 def test_batch_response_has_absolute_non_sliding_expiry() -> None:
     created_at = datetime(2026, 8, 12, 12, tzinfo=UTC)
     case = case_summary()

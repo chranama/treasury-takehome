@@ -287,11 +287,18 @@ class BatchCaseSummary(BatchContractModel):
     short_reason: Annotated[str | None, Field(max_length=MAX_CASE_SUMMARY_REASON_CHARACTERS)] = None
 
     @model_validator(mode="after")
-    def require_outcome_only_for_completed_cases(self) -> Self:
-        if self.state == BatchCaseState.COMPLETED and self.outcome is None:
-            raise ValueError("completed cases require a comparison outcome")
+    def require_terminal_summary_fields(self) -> Self:
+        if self.state == BatchCaseState.COMPLETED and (
+            self.outcome is None or self.short_reason is None
+        ):
+            raise ValueError("completed cases require a comparison outcome and short reason")
         if self.state != BatchCaseState.COMPLETED and self.outcome is not None:
             raise ValueError("only completed cases may include a comparison outcome")
+        if self.state in {BatchCaseState.FAILED, BatchCaseState.INTERRUPTED}:
+            if self.short_reason is None:
+                raise ValueError("failed and interrupted cases require a short reason")
+        elif self.state != BatchCaseState.COMPLETED and self.short_reason is not None:
+            raise ValueError("only terminal cases may include a short reason")
         return self
 
 
@@ -373,6 +380,7 @@ class BatchErrorCode(StrEnum):
     STATE_CONFLICT = "batch_state_conflict"
     NO_READY_CASES = "batch_has_no_ready_cases"
     CORRECTIONS_REMAIN = "batch_has_corrections"
+    RESULTS_UNAVAILABLE = "batch_results_unavailable"
 
 
 BATCH_NOT_FOUND_MESSAGE = "The requested batch is unavailable."
@@ -383,6 +391,7 @@ _BATCH_ERROR_MESSAGES: dict[BatchErrorCode, str] = {
     BatchErrorCode.CORRECTIONS_REMAIN: (
         "Correct every case or explicitly choose to process ready cases only."
     ),
+    BatchErrorCode.RESULTS_UNAVAILABLE: "Start the batch before downloading results.",
 }
 
 

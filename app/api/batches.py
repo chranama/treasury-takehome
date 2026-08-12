@@ -31,6 +31,7 @@ from app.batches.drafts import (
     DraftValidationError,
 )
 from app.batches.limits import (
+    MAX_POLL_RESPONSE_BYTES,
     START_IDEMPOTENCY_KEY_MAX_CHARACTERS,
     START_IDEMPOTENCY_KEY_MIN_CHARACTERS,
 )
@@ -116,7 +117,11 @@ async def get_batch(request: Request, batch_id: str) -> BatchResponse | JSONResp
     batch = await service.get_batch(parsed_batch_id)
     if batch is None:
         return _batch_error(request, BatchErrorCode.NOT_FOUND)
-    return batch
+    return ResponseWithModel(
+        batch,
+        status_code=200,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.get(
@@ -136,7 +141,11 @@ async def get_batch_case(
     detail = await service.get_case(*identifiers)
     if detail is None:
         return _batch_error(request, BatchErrorCode.NOT_FOUND)
-    return detail
+    return ResponseWithModel(
+        detail,
+        status_code=200,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.post(
@@ -174,7 +183,39 @@ async def start_batch(
         )
     except BatchProcessingError as error:
         return _batch_error(request, error.code)
-    return ResponseWithModel(batch, status_code=202, headers={})
+    return ResponseWithModel(
+        batch,
+        status_code=202,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.get(
+    "/batches/{batch_id}/results.csv",
+    response_class=Response,
+    responses={
+        404: {"model": BatchErrorResponse},
+        409: {"model": BatchErrorResponse},
+    },
+)
+async def batch_results_csv(request: Request, batch_id: str) -> Response:
+    parsed_batch_id = _identifier(batch_id)
+    if parsed_batch_id is None:
+        return _batch_error(request, BatchErrorCode.NOT_FOUND)
+    service: BatchProcessingService = request.app.state.batch_processing_service
+    try:
+        content = await service.get_results_csv(parsed_batch_id)
+    except BatchProcessingError as error:
+        return _batch_error(request, error.code)
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": 'attachment; filename="label-review-results.csv"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.patch(
@@ -252,7 +293,7 @@ async def replace_batch_case_image(
 class ResponseWithModel(JSONResponse):
     def __init__(
         self,
-        model: BatchResponse,
+        model: BatchResponse | BatchCaseDetail,
         *,
         status_code: int,
         headers: dict[str, str],
@@ -262,6 +303,8 @@ class ResponseWithModel(JSONResponse):
             content=model.model_dump(mode="json"),
             headers=headers,
         )
+        if len(self.body) > MAX_POLL_RESPONSE_BYTES:
+            raise RuntimeError("batch response exceeds the polling representation limit")
 
 
 def _identifier(value: str) -> UUID | None:

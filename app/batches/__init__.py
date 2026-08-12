@@ -27,7 +27,13 @@ from app.batches.contracts import (
     batch_transition_allowed,
     case_transition_allowed,
 )
-from app.batches.export import CSV_EXPORT_COLUMNS, neutralize_spreadsheet_formula
+from app.batches.export import (
+    CSV_EXPORT_COLUMNS,
+    BatchExportCase,
+    build_results_csv,
+    completed_short_reason,
+    neutralize_spreadsheet_formula,
+)
 from app.batches.limits import (
     BATCH_CLEANUP_INTERVAL_SECONDS,
     BATCH_RETENTION_HOURS,
@@ -111,6 +117,7 @@ __all__ = [
     "BatchCaseSummary",
     "BatchErrorCode",
     "BatchErrorResponse",
+    "BatchExportCase",
     "BatchExpectedInput",
     "BatchField",
     "BatchPreflightErrorResponse",
@@ -133,7 +140,9 @@ __all__ = [
     "StoredBatchCaseResult",
     "ValidatedExpectedInput",
     "batch_transition_allowed",
+    "build_results_csv",
     "case_transition_allowed",
+    "completed_short_reason",
     "generate_csv_template",
     "generate_xlsx_template",
     "is_base_filename",

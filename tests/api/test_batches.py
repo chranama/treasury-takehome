@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from openpyxl import load_workbook
 from PIL import Image
 
-from app.batches import BATCH_TEMPLATE_HEADERS, PreflightIssueCode
+from app.batches import BATCH_TEMPLATE_HEADERS, MAX_POLL_RESPONSE_BYTES, PreflightIssueCode
 from app.config import Settings
 from app.db import connect
 from app.extraction import (
@@ -291,14 +291,66 @@ def test_unknown_malformed_and_cross_batch_ids_share_the_not_found_response(
             client.get(f"/api/batches/{first['batch_id']}/cases/{second['cases'][0]['case_id']}"),
         ]
         collection = client.get("/api/batches")
+        unknown_export = client.get("/api/batches/not-a-uuid/results.csv")
 
     assert collection.status_code == 404
-    for response in responses:
+    for response in [*responses, unknown_export]:
         assert response.status_code == 404
         payload = response.json()
         assert payload["code"] == "batch_not_found"
         assert payload["message"] == "The requested batch is unavailable."
         assert UUID(payload["correlation_id"]).version == 4
+
+
+def test_draft_export_conflicts_and_expired_poll_detail_and_export_are_not_found(
+    tmp_path: Path,
+) -> None:
+    settings = make_settings(tmp_path)
+    rows = [["APP-1", "label.png", "Brand", "Bourbon", "45", "750 mL"]]
+    with TestClient(create_app(settings)) as client:
+        created = client.post(
+            "/api/batches/preflight",
+            files=package_files(rows, [("label.png", png_bytes())]),
+        ).json()
+        batch_id = created["batch_id"]
+        case_id = created["cases"][0]["case_id"]
+        draft_export = client.get(f"/api/batches/{batch_id}/results.csv")
+        with connect(settings.database_path) as connection:
+            connection.execute(
+                "UPDATE batch_reviews SET expires_at = '2000-01-01T00:00:00+00:00' "
+                "WHERE batch_id = ?",
+                (batch_id,),
+            )
+        expired = [
+            client.get(f"/api/batches/{batch_id}"),
+            client.get(f"/api/batches/{batch_id}/cases/{case_id}"),
+            client.get(f"/api/batches/{batch_id}/results.csv"),
+        ]
+
+    assert draft_export.status_code == 409
+    assert draft_export.json()["code"] == "batch_results_unavailable"
+    for response in expired:
+        assert response.status_code == 404
+        assert response.json()["code"] == "batch_not_found"
+
+
+def test_maximum_case_polling_representation_stays_within_the_public_byte_bound(
+    tmp_path: Path,
+) -> None:
+    rows = [
+        [f"APP-{index:02d}", f"label-{index:02d}.png", "Brand", "Bourbon", "45", "750 mL"]
+        for index in range(1, 26)
+    ]
+    images = [(f"label-{index:02d}.png", png_bytes()) for index in range(1, 26)]
+    with TestClient(create_app(make_settings(tmp_path))) as client:
+        created = client.post("/api/batches/preflight", files=package_files(rows, images))
+        polled = client.get(f"/api/batches/{created.json()['batch_id']}")
+
+    assert created.status_code == 201
+    assert polled.status_code == 200
+    assert polled.headers["cache-control"] == "no-store"
+    assert len(polled.content) <= MAX_POLL_RESPONSE_BYTES
+    assert polled.json()["counts"]["total"] == 25
 
 
 def test_start_is_idempotent_and_each_internal_case_has_one_durable_attempt(
@@ -385,6 +437,15 @@ def test_ready_only_selection_is_explicit_and_case_failure_is_isolated(tmp_path:
             headers={"Idempotency-Key": "ready-cases-only-key"},
         )
         completed = wait_for_terminal(client, created["batch_id"])
+        completed_case = next(case for case in completed["cases"] if case["state"] == "completed")
+        failed_case = next(case for case in completed["cases"] if case["state"] == "failed")
+        completed_detail = client.get(
+            f"/api/batches/{created['batch_id']}/cases/{completed_case['case_id']}"
+        )
+        failed_detail = client.get(
+            f"/api/batches/{created['batch_id']}/cases/{failed_case['case_id']}"
+        )
+        exported = client.get(f"/api/batches/{created['batch_id']}/results.csv")
 
     assert rejected.status_code == 409
     assert rejected.json()["code"] == "batch_has_corrections"
@@ -393,6 +454,38 @@ def test_ready_only_selection_is_explicit_and_case_failure_is_isolated(tmp_path:
     assert completed["counts"]["completed"] == 1
     assert completed["counts"]["failed"] == 1
     assert completed["counts"]["not_selected"] == 1
+    assert completed["expires_at"] == created["expires_at"]
+    assert "provider_request_id" not in str(completed)
+    assert "result_json" not in str(completed)
+    assert completed_case["short_reason"] == (
+        "Visible brand name differs materially from the expected value."
+    )
+    assert failed_case["short_reason"] == "Label extraction is temporarily unavailable. Try again."
+    assert completed_detail.status_code == 200
+    assert completed_detail.headers["cache-control"] == "no-store"
+    detail_checks = completed_detail.json()["result"]["result"]["checks"]
+    assert {check["name"] for check in detail_checks} == {
+        "brand_name",
+        "class_type",
+        "alcohol_content",
+        "net_contents",
+        "government_warning",
+    }
+    assert failed_detail.status_code == 200
+    assert failed_detail.json()["result"] is None
+    assert exported.status_code == 200
+    assert exported.headers["content-disposition"] == (
+        'attachment; filename="label-review-results.csv"'
+    )
+    assert exported.headers["cache-control"] == "no-store"
+    export_rows = list(csv.DictReader(StringIO(exported.content.decode("utf-8-sig"))))
+    assert len(export_rows) == 2
+    assert {row["Processing Status"] for row in export_rows} == {"completed", "failed"}
+    assert {row["Application ID"] for row in export_rows} == {"APP-1", "APP-2"}
+    completed_row = next(row for row in export_rows if row["Processing Status"] == "completed")
+    assert completed_row["Brand Name Status"] == "needs_review"
+    assert completed_row["Government Warning Status"] == "match"
+    assert completed_row["Short Reason"] == completed_case["short_reason"]
     assert adapter.calls == 2
     assert not list(make_settings(tmp_path).batch_image_dir.glob("*.png"))
 

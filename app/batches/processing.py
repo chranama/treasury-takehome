@@ -26,6 +26,7 @@ from app.batches.contracts import (
     PreflightIssue,
     StoredBatchCaseResult,
 )
+from app.batches.export import BatchExportCase, build_results_csv, completed_short_reason
 from app.batches.limits import GRACEFUL_SHUTDOWN_DRAIN_SECONDS, POLL_INTERVAL_MILLISECONDS
 from app.comparison import ExpectedReview, ReviewResult
 from app.db import connect
@@ -147,6 +148,19 @@ class BatchProcessingService:
 
     async def get_case(self, batch_id: UUID, case_id: UUID) -> BatchCaseDetail | None:
         return await to_thread.run_sync(self._get_case, batch_id, case_id, self._now())
+
+    async def get_results_csv(self, batch_id: UUID) -> bytes:
+        status, content = await to_thread.run_sync(
+            self._get_results_csv,
+            batch_id,
+            self._now(),
+        )
+        if status == "missing":
+            raise BatchProcessingError(BatchErrorCode.NOT_FOUND)
+        if status == "not_started":
+            raise BatchProcessingError(BatchErrorCode.RESULTS_UNAVAILABLE)
+        assert content is not None
+        return content
 
     async def reconcile_incomplete(self) -> None:
         storage_keys = await to_thread.run_sync(self._reconcile_incomplete, self._now())
@@ -664,6 +678,60 @@ class BatchProcessingService:
             result=result,
         )
 
+    def _get_results_csv(
+        self,
+        batch_id: UUID,
+        now: datetime,
+    ) -> tuple[str, bytes | None]:
+        with connect(self.database_path) as connection:
+            connection.row_factory = sqlite3.Row
+            batch = connection.execute(
+                """
+                SELECT start_idempotency_hash
+                FROM batch_reviews WHERE batch_id = ? AND expires_at > ?
+                """,
+                (str(batch_id), _iso(now)),
+            ).fetchone()
+            if batch is None:
+                return "missing", None
+            if batch["start_idempotency_hash"] is None:
+                return "not_started", None
+            rows = connection.execute(
+                """
+                SELECT c.*, r.result_json
+                FROM batch_cases AS c
+                LEFT JOIN batch_case_results AS r ON r.case_id = c.case_id
+                WHERE c.batch_id = ?
+                  AND c.status NOT IN ('needs_correction', 'ready', 'not_selected')
+                ORDER BY c.row_number
+                """,
+                (str(batch_id),),
+            ).fetchall()
+
+        cases: list[BatchExportCase] = []
+        for row in rows:
+            result = (
+                ReviewResult.model_validate_json(row["result_json"])
+                if row["result_json"] is not None
+                else None
+            )
+            cases.append(
+                BatchExportCase(
+                    application_id=row["application_id"],
+                    state=BatchCaseState(row["status"]),
+                    expected_input=BatchExpectedInput(
+                        brand_name=row["expected_brand"],
+                        class_type=row["expected_class_type"],
+                        expected_abv=row["expected_abv"],
+                        expected_net_contents=row["expected_net_contents"],
+                    ),
+                    processing_duration_ms=row["processing_duration_ms"],
+                    result=result,
+                    short_reason=row["safe_failure_reason"],
+                )
+            )
+        return "ready", build_results_csv(cases)
+
     def _delete_storage_file(self, storage_key: str) -> bool:
         try:
             self._storage_path(storage_key).unlink(missing_ok=True)
@@ -710,7 +778,10 @@ def _case_summary(row: sqlite3.Row) -> BatchCaseSummary:
         issues=[PreflightIssue.model_validate(value) for value in json.loads(row["issues_json"])],
         outcome=review.outcome if review is not None else None,
         processing_duration_ms=row["processing_duration_ms"],
-        short_reason=row["safe_failure_reason"],
+        short_reason=(
+            row["safe_failure_reason"]
+            or (completed_short_reason(review) if review is not None else None)
+        ),
     )
 
 

@@ -1,6 +1,6 @@
 # P1 Batch Contracts
 
-**Status:** Milestone P1.0 contract through P1.4 background processing
+**Status:** Milestone P1.0 contract through P1.5 result and export APIs
 
 **Schema proposal version:** 2
 
@@ -12,8 +12,9 @@ P1.0 defines provider-neutral domain contracts, deterministic blank templates, A
 export safety, and an additive database proposal. P1.1 implements bounded workbook preflight, and
 P1.2 applies the additive migration and persists short-lived drafts. P1.3 exposes the template,
 preflight, retrieval, correction, and replacement routes and the reviewer-facing preflight UI.
-P1.4 adds durable idempotent start and independently processes selected cases. Polling-oriented
-result review and CSV export remain P1.5 work.
+P1.4 adds durable idempotent start and independently processes selected cases. P1.5 completes the
+bounded polling, case-detail, outcome-summary, and safe CSV download APIs. The progress-and-results
+interface remains P1.6 work.
 
 No module under `app/batches` may import the OpenAI SDK. Each selected case will eventually call
 the existing P0 review boundary independently; expected values, filenames, spreadsheet content,
@@ -237,9 +238,32 @@ Expected and extracted details are excluded from polling summaries. The case-det
 the bounded expected input, validated `ExpectedReview` when available, and the existing five-check
 `ReviewResult` only for completed work.
 
+## P1.5 result and export policy
+
+P1.5 makes the following concrete representation choices:
+
+- Polling continues to return the original absolute expiry and never writes during retrieval. The
+  encoded JSON representation is checked against the 256 KiB public limit before it is returned.
+- A completed summary uses the first nonmatching or uncertain five-check reason as its short reason;
+  an all-match result uses `All five checks matched.` Failed and interrupted cases retain their
+  bounded safe processing reason. Provider request metadata and raw payloads are never projected.
+- Case detail reuses the stored P0 `ReviewResult` unchanged, including exactly five check objects.
+  Failed and interrupted cases return no fabricated comparison result.
+- CSV download is available after the batch has been started, including while work remains active,
+  so every selected case can be represented by its current state. Draft downloads return the
+  bounded `batch_results_unavailable` conflict; `not_selected` cases are excluded.
+- Result CSV is encoded as UTF-8 with a byte-order mark for common spreadsheet compatibility, uses
+  CRLF records and standard CSV quoting, and downloads as the stable filename
+  `label-review-results.csv` with `no-store` and `nosniff` headers.
+- Multiple extracted candidates share one cell separated by ` | ` in provider order. Full
+  Government Warning text remains excluded; only warning status is exported.
+- Formula neutralization is applied to every rendered cell, not only fields currently expected to
+  contain user or model text. Any leading `=`, `+`, `-`, `@`, tab, or carriage return receives an
+  apostrophe before CSV quoting.
+
 ## API contract
 
-The complete P1 route surface is shown below. P1.4 implements every route except CSV results export:
+P1.5 implements the complete planned P1 route surface:
 
 ```text
 GET    /api/batch-template.xlsx
