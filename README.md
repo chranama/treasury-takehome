@@ -101,3 +101,4 @@ The default run makes four initial model requests over versioned synthetic fixtu
 - [Project background](docs/background.md)
 - [Demo specification and assumptions](docs/specification.md)
 - [Implementation approach, tools, and assumptions](docs/implementation.md)
+- [P1 batch contracts, templates, and schema proposal](docs/p1-batch-contracts.md)

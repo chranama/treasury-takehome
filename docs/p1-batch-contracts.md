@@ -1,0 +1,184 @@
+# P1 Batch Contracts
+
+**Status:** Milestone P1.0 contract
+
+**Schema proposal version:** 2
+
+**Last updated:** 2026-08-12
+
+## Milestone boundary
+
+P1.0 defines provider-neutral domain contracts, deterministic blank templates, API behavior,
+export safety, and an additive database proposal. It does not parse reviewer workbooks, persist
+drafts, expose batch routes, run background work, or apply a database migration. Those behaviors
+belong to P1.1 through P1.5.
+
+No module under `app/batches` may import the OpenAI SDK. Each selected case will eventually call
+the existing P0 review boundary independently; expected values, filenames, spreadsheet content,
+other cases, and prior results never enter the extraction request.
+
+## Spreadsheet contract
+
+The first row of the `Batch` worksheet or CSV must contain these exact, case-sensitive headers in
+this order:
+
+1. `Application ID`
+2. `Label Image Filename`
+3. `Expected Brand`
+4. `Expected Class/Type`
+5. `Expected ABV`
+6. `Expected Net Contents`
+
+There are no header aliases. Leading or trailing header whitespace is invalid rather than silently
+corrected. Blank rows do not count as cases; no more than 25 nonblank data rows are accepted.
+
+`Expected Net Contents` remains one human-readable cell because that is the accepted product
+contract. It accepts one positive metric quantity such as `750 mL` or `0.75 L`. `Expected ABV`
+accepts a decimal percentage from 0 through 100, with an optional trailing percent sign. The parser
+will reject formulas and external links instead of calculating or following them.
+
+Application IDs and filenames are trimmed and Unicode-normalized to NFC for matching. Duplicate
+application IDs are detected case-insensitively. A label reference must be a base filename with no
+directory or drive component. Filename matching is case-insensitive after NFC normalization;
+multiple original filenames that resolve to the same normalized key are ambiguous and rejected.
+
+## Accepted limits
+
+| Limit | Value |
+| --- | ---: |
+| Cases | 25 nonblank data rows |
+| Initially selected images | 25 |
+| Spreadsheet file | 1 MiB |
+| Spreadsheet and images combined | 100 MiB |
+| Any populated spreadsheet cell | 500 Unicode code points |
+| Application ID | 100 Unicode code points |
+| Image base filename | 255 Unicode code points |
+| Expected brand or class/type | 200 Unicode code points |
+| ABV cell | 32 Unicode code points |
+| Net-contents cell | 64 Unicode code points |
+| Image | Existing P0 limit: 10 MiB, 40 megapixels, 6,000 pixels per side |
+| Polling representation | 256 KiB maximum encoded response |
+| Poll interval while active | 1.5 seconds |
+| Absolute content retention | 24 hours from draft creation; polling and edits do not extend it |
+| Graceful-shutdown drain | 15 seconds |
+
+The 100 MiB aggregate cap is independent of the 10 MiB per-image cap. A 25-case package remains a
+valid product shape, but its images may need to be compressed to fit the bounded request envelope.
+
+## Preflight issues
+
+`PreflightIssueCode` is the stable machine contract. Its `message` and `severity` are computed from
+the code so uploaded or model-derived text cannot become an accidental public error message.
+Issues may be batch-, row-, or image-scoped; row issues include the original spreadsheet row
+number. An unreferenced selected image is a warning. Every other defined issue is an error and
+prevents the affected case, or the whole structurally invalid package, from becoming ready.
+
+Invalid expected values are retained as bounded strings for correction, while
+`normalized_expected` exists only after all expected values validate into the existing
+`ExpectedReview` model. Invalid cases never receive provider work.
+
+## State and result contracts
+
+Batch states are `draft`, `queued`, `processing`, `completed`, and `interrupted`. Expiry is deletion,
+not a queryable state. Case states are `needs_correction`, `ready`, `queued`, `processing`,
+`completed`, `failed`, `interrupted`, and `not_selected`.
+
+The transition maps in `app.batches.contracts` are authoritative. Draft corrections may move a case
+between `needs_correction` and `ready`. Start moves ready cases to `queued`; when the reviewer
+explicitly starts ready cases only, the remaining invalid cases move to `not_selected`.
+Queued and processing cases end independently. A provider or application failure is `failed`, not a
+comparison outcome and not `Needs review`.
+
+Polling returns at most 25 bounded case summaries containing:
+
+- case ID and source row number;
+- application ID and associated base filename;
+- processing state and preflight issues;
+- overall comparison outcome only for completed cases;
+- processing duration when available; and
+- one safe reason of at most 300 characters.
+
+Expected and extracted details are excluded from polling summaries. The case-detail contract returns
+the bounded expected input, validated `ExpectedReview` when available, and the existing five-check
+`ReviewResult` only for completed work.
+
+## API contract
+
+The planned route surface is:
+
+```text
+GET    /api/batch-template.xlsx
+GET    /api/batch-template.csv
+POST   /api/batches/preflight
+GET    /api/batches/{batch_id}
+GET    /api/batches/{batch_id}/cases/{case_id}
+PATCH  /api/batches/{batch_id}/cases/{case_id}
+PUT    /api/batches/{batch_id}/cases/{case_id}/image
+POST   /api/batches/{batch_id}/start
+GET    /api/batches/{batch_id}/results.csv
+```
+
+Batch and case IDs are UUIDv4 values. There is no collection-list endpoint.
+
+`POST .../start` requires an `Idempotency-Key` of 16 through 128 characters. Only its SHA-256 digest
+is stored. A first accepted start durably changes the draft to `queued` before returning
+`202 Accepted`. Reusing the same key returns the existing representation—`202` while active and
+`200` after a terminal state—and creates no work or provider attempt. A different key after start
+returns `409` with `batch_state_conflict`.
+
+`all_cases` is accepted only when every case is ready. `ready_cases_only` explicitly marks remaining
+invalid cases `not_selected`; at least one ready case is required.
+
+An unknown, expired, malformed, or otherwise unavailable batch ID always returns `404` with code
+`batch_not_found` and the message `The requested batch is unavailable.` This same bounded response
+prevents callers from distinguishing expired content from another user's identifier. A case that
+does not belong to the requested batch uses the same response. Polling never extends expiry.
+
+## CSV export contract
+
+The export contains one row per selected case and the columns defined by
+`app.batches.export.CSV_EXPORT_COLUMNS`: application ID, processing state, outcome, duration, the
+five check statuses, expected and extracted values for the four application fields, and a short
+reason. The export omits full Government Warning text; warning status and the short reason are
+sufficient for triage, while side-by-side warning detail remains in the case-detail response.
+
+Every user- or model-derived cell beginning with `=`, `+`, `-`, `@`, tab, or carriage return is
+prefixed with an apostrophe before normal CSV quoting. Output is UTF-8 with a stable header order and
+one record per selected case.
+
+## Additive schema proposal
+
+`app.batches.schema` proposes schema version 2 and valid SQLite DDL for four content-bearing tables:
+
+- `batch_reviews` for unguessable identity, lifecycle, absolute expiry, selection, and the start-key
+  digest;
+- `batch_images` for private storage keys, bounded image metadata, expiry, and cleanup bookkeeping;
+- `batch_cases` for bounded reviewer content, validation issues, processing state, and an optional
+  content-free provider correlation; and
+- `batch_case_results` for the temporary structured comparison result.
+
+These tables are distinct from `review_submissions` and `provider_attempts`, which remain the
+content-free operational usage ledger. The proposal only adds tables and indexes; it does not alter
+or discard P0 rows. P1.2 will apply the proposal transactionally and update `app_metadata` from
+schema version 1 to 2 only after successful DDL execution.
+
+All four batch tables carry or inherit an absolute expiry. Image files remain outside SQLite under
+private unpredictable storage keys. Deleting a batch cascades through case content and results;
+filesystem deletion and orphan reconciliation remain explicit service work in P1.2 and P1.7.
+
+## P1 requirement coverage
+
+| Product requirement | P1.0 contract |
+| --- | --- |
+| XLSX or UTF-8 CSV plus images | Strict six-column templates and bounded package limits |
+| No ZIP-only workflow | ZIP is absent from formats and routes |
+| Preflight problems | Stable issue codes, locations, messages, and readiness states |
+| Correct values or images | Patch and replacement routes plus mutable draft transitions |
+| Process ready cases only | Explicit `ready_cases_only` start selection |
+| Independent case outcomes | Separate case states and stored `ReviewResult` |
+| Poll progress | Bounded summaries, exact counts, and 1.5-second interval |
+| Inspect P0 detail | Separate case detail containing the existing five-check contract |
+| Filter outcomes | Summary state, outcome, and short reason fields |
+| Safe CSV | Fixed columns, no full warning text, and formula neutralization |
+| No more than 24 hours | Absolute non-sliding expiry in response and schema contracts |
+| Content-free operational records | Dedicated batch content tables and provider-neutral modules |
