@@ -68,12 +68,21 @@ class AttemptSubmission(Protocol):
 
 
 class AttemptGate(Protocol):
+    async def admit_source(self, source_identity: str) -> None: ...
+
     def submission(
         self,
         *,
         correlation_id: str,
         idempotency_key: str,
         source_identity: str,
+    ) -> AbstractAsyncContextManager[AttemptSubmission]: ...
+
+    def internal_submission(
+        self,
+        *,
+        correlation_id: str,
+        idempotency_key: str,
     ) -> AbstractAsyncContextManager[AttemptSubmission]: ...
 
 
@@ -107,6 +116,16 @@ class _NoCostSubmission:
 class NoCostFakeAttemptGate:
     """Non-durable permit used only where extraction makes no provider request."""
 
+    def __init__(self, *, max_concurrency: int = 2) -> None:
+        if max_concurrency != 2:
+            raise ValueError("the prototype requires global extraction concurrency of two")
+        self.max_concurrency = max_concurrency
+        self._active_submissions = 0
+        self._slot_condition = asyncio.Condition()
+
+    async def admit_source(self, source_identity: str) -> None:
+        del source_identity
+
     @asynccontextmanager
     async def submission(
         self,
@@ -115,8 +134,36 @@ class NoCostFakeAttemptGate:
         idempotency_key: str,
         source_identity: str,
     ) -> AsyncGenerator[AttemptSubmission, None]:
-        del correlation_id, idempotency_key, source_identity
-        yield _NoCostSubmission()
+        del correlation_id, idempotency_key
+        await self.admit_source(source_identity)
+        async with self._slot(wait=False):
+            yield _NoCostSubmission()
+
+    @asynccontextmanager
+    async def internal_submission(
+        self,
+        *,
+        correlation_id: str,
+        idempotency_key: str,
+    ) -> AsyncGenerator[AttemptSubmission, None]:
+        del correlation_id, idempotency_key
+        async with self._slot(wait=True):
+            yield _NoCostSubmission()
+
+    @asynccontextmanager
+    async def _slot(self, *, wait: bool) -> AsyncGenerator[None, None]:
+        async with self._slot_condition:
+            if not wait and self._active_submissions >= self.max_concurrency:
+                raise AttemptRejected(AttemptRejectionKind.CAPACITY_REACHED)
+            while self._active_submissions >= self.max_concurrency:
+                await self._slot_condition.wait()
+            self._active_submissions += 1
+        try:
+            yield
+        finally:
+            async with self._slot_condition:
+                self._active_submissions = max(0, self._active_submissions - 1)
+                self._slot_condition.notify(1)
 
 
 def cost_to_units(cost_usd: Decimal) -> int:
@@ -242,6 +289,7 @@ class SQLiteUsageGate:
         self.max_concurrency = max_concurrency
         self.max_attempts_per_submission = max_attempts_per_submission
         self._state_lock = asyncio.Lock()
+        self._slot_condition = asyncio.Condition(self._state_lock)
         self._active_submissions = 0
         self._source_secret = secrets.token_bytes(32)
         self._source_events: dict[bytes, deque[float]] = defaultdict(deque)
@@ -254,8 +302,37 @@ class SQLiteUsageGate:
         idempotency_key: str,
         source_identity: str,
     ) -> AsyncGenerator[AttemptSubmission, None]:
-        await self._check_source_throttle(source_identity)
-        await self._acquire_slot()
+        await self.admit_source(source_identity)
+        async with self._processing_submission(
+            correlation_id=correlation_id,
+            idempotency_key=idempotency_key,
+            wait_for_slot=False,
+        ) as submission:
+            yield submission
+
+    @asynccontextmanager
+    async def internal_submission(
+        self,
+        *,
+        correlation_id: str,
+        idempotency_key: str,
+    ) -> AsyncGenerator[AttemptSubmission, None]:
+        async with self._processing_submission(
+            correlation_id=correlation_id,
+            idempotency_key=idempotency_key,
+            wait_for_slot=True,
+        ) as submission:
+            yield submission
+
+    @asynccontextmanager
+    async def _processing_submission(
+        self,
+        *,
+        correlation_id: str,
+        idempotency_key: str,
+        wait_for_slot: bool,
+    ) -> AsyncGenerator[AttemptSubmission, None]:
+        await self._acquire_slot(wait=wait_for_slot)
         submission: _SQLiteSubmission | None = None
         try:
             idempotency_hash = hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()
@@ -267,6 +344,9 @@ class SQLiteUsageGate:
             submission = _SQLiteSubmission(self, correlation_id)
             try:
                 yield submission
+            except AttemptRejected as error:
+                await submission.fail(error.kind.value)
+                raise
             except BaseException:
                 await submission.fail("interrupted")
                 raise
@@ -275,6 +355,9 @@ class SQLiteUsageGate:
                     await submission.fail("internal_failure")
         finally:
             await self._release_slot()
+
+    async def admit_source(self, source_identity: str) -> None:
+        await self._check_source_throttle(source_identity)
 
     async def reconcile_incomplete(self) -> None:
         await to_thread.run_sync(self._reconcile_incomplete)
@@ -293,15 +376,18 @@ class SQLiteUsageGate:
                 raise AttemptRejected(AttemptRejectionKind.TRAFFIC_THROTTLED)
             events.append(now)
 
-    async def _acquire_slot(self) -> None:
-        async with self._state_lock:
-            if self._active_submissions >= self.max_concurrency:
+    async def _acquire_slot(self, *, wait: bool) -> None:
+        async with self._slot_condition:
+            if not wait and self._active_submissions >= self.max_concurrency:
                 raise AttemptRejected(AttemptRejectionKind.CAPACITY_REACHED)
+            while self._active_submissions >= self.max_concurrency:
+                await self._slot_condition.wait()
             self._active_submissions += 1
 
     async def _release_slot(self) -> None:
-        async with self._state_lock:
+        async with self._slot_condition:
             self._active_submissions = max(0, self._active_submissions - 1)
+            self._slot_condition.notify(1)
 
     def _start_submission(self, correlation_id: str, idempotency_hash: str) -> None:
         created_at = datetime.now(UTC).isoformat()

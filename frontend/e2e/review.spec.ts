@@ -126,7 +126,10 @@ test('corrects a mixed package and explicitly confirms ready-only selection', as
   await expect(page.locator('.count-correction strong')).toHaveText('0')
   await page.getByRole('button', { name: 'Process all ready cases' }).click()
   await page.getByRole('button', { name: 'Confirm ready cases' }).click()
-  await expect(page.getByRole('status')).toContainText('Selection confirmed for 2 ready cases')
+  await expect(page.getByRole('heading', { name: /Batch processing (started|finished)/ })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Batch processing finished' })).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('2 completed')
 })
 
 test('keeps an entirely invalid package as an understandable correction draft', async ({ page }) => {

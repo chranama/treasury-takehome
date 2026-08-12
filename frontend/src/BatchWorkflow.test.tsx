@@ -1,10 +1,11 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { BatchWorkflow } from './BatchWorkflow'
 import type {
   BatchCaseSummary,
   BatchPreflightResponse,
+  BatchResponse,
   PreflightIssue,
 } from './batchTypes'
 
@@ -146,7 +147,27 @@ describe('BatchWorkflow', () => {
         issues: [issue('missing_image', 'Select the label image named by this row.', 'label_image_filename')],
       }),
     ])
-    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(mixed, 201)))
+    const started: BatchResponse = {
+      ...mixed,
+      state: 'queued',
+      counts: {
+        ...mixed.counts,
+        ready: 0,
+        needs_correction: 0,
+        queued: 1,
+        not_selected: 1,
+      },
+      cases: [
+        { ...mixed.cases[0], state: 'queued' },
+        { ...mixed.cases[1], state: 'not_selected' },
+      ],
+      next_poll_after_ms: 1500,
+    }
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(mixed, 201))
+      .mockResolvedValueOnce(jsonResponse(started, 202))
+    vi.stubGlobal('fetch', fetchMock)
     render(<BatchWorkflow />)
     selectPackage()
     fireEvent.click(screen.getByRole('button', { name: 'Check batch' }))
@@ -165,8 +186,15 @@ describe('BatchWorkflow', () => {
     expect(confirm).toHaveFocus()
     fireEvent.click(confirm)
 
-    expect(screen.getByRole('status')).toHaveTextContent('Selection confirmed for 1 ready case')
-    await waitFor(() => expect(start).toHaveFocus())
+    expect(await screen.findByRole('heading', { name: 'Batch processing started' })).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `/api/batches/${mixed.batch_id}/start`,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ 'Idempotency-Key': expect.stringMatching(/^batch-start:/) }),
+        body: JSON.stringify({ selection: 'ready_cases_only' }),
+      }),
+    )
   })
 
   it('recovers an unexpired draft from the batch identifier after refresh', async () => {

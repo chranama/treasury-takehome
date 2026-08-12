@@ -1,4 +1,14 @@
-export type BatchCaseState = 'needs_correction' | 'ready'
+export type BatchCaseState =
+  | 'needs_correction'
+  | 'ready'
+  | 'queued'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'interrupted'
+  | 'not_selected'
+
+export type BatchState = 'draft' | 'queued' | 'processing' | 'completed' | 'interrupted'
 
 export type BatchField =
   | 'application_id'
@@ -24,9 +34,9 @@ export interface BatchCaseSummary {
   label_image_filename: string
   state: BatchCaseState
   issues: PreflightIssue[]
-  outcome: null
-  processing_duration_ms: null
-  short_reason: null
+  outcome: 'all_checks_passed' | 'needs_review' | 'unable_to_process' | null
+  processing_duration_ms: number | null
+  short_reason: string | null
 }
 
 export interface BatchStateCounts {
@@ -41,13 +51,18 @@ export interface BatchStateCounts {
   not_selected: number
 }
 
-export interface BatchPreflightResponse {
+export interface BatchResponse {
   batch_id: string
-  state: 'draft'
+  state: BatchState
   created_at: string
   expires_at: string
   counts: BatchStateCounts
   cases: BatchCaseSummary[]
+  next_poll_after_ms: number | null
+}
+
+export interface BatchPreflightResponse extends BatchResponse {
+  state: 'draft'
   next_poll_after_ms: null
 }
 
@@ -62,7 +77,7 @@ export interface BatchCaseDetail {
   summary: BatchCaseSummary
   expected_input: BatchExpectedInput
   normalized_expected: unknown | null
-  result: null
+  result: unknown | null
 }
 
 export interface BatchPatch {

@@ -4,7 +4,7 @@ A standalone proof of concept that helps an alcohol-label reviewer compare expec
 
 ## Project status
 
-The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. The P1 batch workflow now includes templates, bounded spreadsheet preflight, recoverable 24-hour drafts, and an accessible correction interface; background processing and results remain planned. Public live extraction remains disabled by default while deployment work is completed.
+The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. The P1 batch workflow now includes templates, bounded spreadsheet preflight, recoverable 24-hour drafts, an accessible correction interface, and idempotent background processing with independent case outcomes. Polling-oriented result review and CSV export remain planned. Public live extraction remains disabled by default while deployment work is completed.
 
 ## Demo workflow
 
@@ -16,7 +16,7 @@ The core workflow allows a reviewer to:
 4. check the mandatory Government Health Warning; and
 5. identify matches, discrepancies, and cases requiring human review.
 
-A bounded batch workflow is planned to demonstrate how the same review could be applied to multiple applications.
+A bounded batch workflow can preflight and start as many as 25 ready applications while applying the same review independently to each selected case.
 
 ## Deployed application
 
@@ -101,4 +101,4 @@ The default run makes four initial model requests over versioned synthetic fixtu
 - [Project background](docs/background.md)
 - [Demo specification and assumptions](docs/specification.md)
 - [Implementation approach, tools, and assumptions](docs/implementation.md)
-- [P1 batch contracts, templates, parsing, draft persistence, and preflight UI](docs/p1-batch-contracts.md)
+- [P1 batch contracts, preflight workflow, and background processing](docs/p1-batch-contracts.md)

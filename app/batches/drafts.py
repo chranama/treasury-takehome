@@ -664,7 +664,7 @@ class BatchDraftService:
                     SELECT i.storage_key
                     FROM batch_images AS i
                     JOIN batch_reviews AS b ON b.batch_id = i.batch_id
-                    WHERE i.status = 'available' AND b.expires_at > ?
+                    WHERE i.status IN ('available', 'processing') AND b.expires_at > ?
                     """,
                     (_iso(now),),
                 )

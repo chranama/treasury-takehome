@@ -1,6 +1,6 @@
 # P1 Batch Contracts
 
-**Status:** Milestone P1.0 contract through P1.3 reviewer preflight workflow
+**Status:** Milestone P1.0 contract through P1.4 background processing
 
 **Schema proposal version:** 2
 
@@ -12,7 +12,8 @@ P1.0 defines provider-neutral domain contracts, deterministic blank templates, A
 export safety, and an additive database proposal. P1.1 implements bounded workbook preflight, and
 P1.2 applies the additive migration and persists short-lived drafts. P1.3 exposes the template,
 preflight, retrieval, correction, and replacement routes and the reviewer-facing preflight UI.
-Provider work and result APIs remain P1.4 and P1.5 work.
+P1.4 adds durable idempotent start and independently processes selected cases. Polling-oriented
+result review and CSV export remain P1.5 work.
 
 No module under `app/batches` may import the OpenAI SDK. Each selected case will eventually call
 the existing P0 review boundary independently; expected values, filenames, spreadsheet content,
@@ -179,11 +180,37 @@ P1.3 makes the following concrete interaction choices:
 - `Process all ready cases` is disabled when no row is ready and always opens a keyboard-focused
   confirmation. When corrections remain, the dialog states their count and that they will not be
   selected.
-- P1.3 does not create a start route or pretend work was queued. Confirming the UI selection reports
-  that processing is not enabled in the preflight preview. The durable idempotent start transition
-  remains P1.4 work.
+- The P1.3 confirmation boundary is retained. P1.4 activates it by posting either `all_cases` or the
+  explicitly disclosed `ready_cases_only` selection with one browser-generated idempotency key.
 - Unknown, malformed, expired, and cross-batch identifiers return the same bounded `batch_not_found`
   representation. There is still no batch collection/list route.
+
+## P1.4 processing policy
+
+P1.4 makes the following concrete lifecycle choices:
+
+- Preflight and the first accepted start each consume one public source-admission event. Internal
+  cases do not repeat source admission, so a legitimate batch cannot throttle itself.
+- The start-key digest is scoped to the batch identifier. Reusing the same key returns the current
+  batch representation with `202 Accepted` in every state; a different key cannot create a second
+  job.
+- The in-process registry owns task objects only. SQLite owns every browser-visible transition,
+  selected-case count, terminal result, and bounded failure reason.
+- At most two case workers run per batch, while every internal case also enters the same global
+  two-slot extraction guard used by P0. Internal workers wait for that shared slot; public P0
+  requests preserve their existing fail-closed admission behavior when both slots are occupied.
+- Each live internal case has a stable case-UUID correlation identity. Every initial attempt and
+  eligible retry uses the unchanged P0 reservation and settlement path, so retry accounting remains
+  separate and durable.
+- Provider, capacity, validation, and application failures terminate only the affected case with a
+  safe category and reason. Other queued cases continue, and a batch with terminal case failures is
+  still `completed` rather than a batch-wide failure.
+- A claimed image is deleted after its case reaches a terminal state, whether extraction succeeds
+  or fails. Images for cases explicitly not selected remain subject to the original 24-hour expiry.
+- Shutdown stops accepting starts and drains active work for up to 15 seconds. Remaining task
+  objects are cancelled and their uncertain cases become `interrupted`. Startup reconciles any
+  prior `queued` or `processing` work to `interrupted`, settles reserved usage rows conservatively,
+  deletes images for uncertain provider work, and never replays extraction.
 
 ## State and result contracts
 
@@ -212,9 +239,7 @@ the bounded expected input, validated `ExpectedReview` when available, and the e
 
 ## API contract
 
-The complete P1 route surface is shown below. P1.3 implements the template, preflight, draft
-retrieval, case-detail, correction, and image-replacement routes; start and results remain inactive
-until their later milestones:
+The complete P1 route surface is shown below. P1.4 implements every route except CSV results export:
 
 ```text
 GET    /api/batch-template.xlsx
@@ -232,8 +257,8 @@ Batch and case IDs are UUIDv4 values. There is no collection-list endpoint.
 
 `POST .../start` requires an `Idempotency-Key` of 16 through 128 characters. Only its SHA-256 digest
 is stored. A first accepted start durably changes the draft to `queued` before returning
-`202 Accepted`. Reusing the same key returns the existing representation—`202` while active and
-`200` after a terminal state—and creates no work or provider attempt. A different key after start
+`202 Accepted`. Reusing the same key returns the existing representation with `202` and creates no
+work or provider attempt. A different key after start
 returns `409` with `batch_state_conflict`.
 
 `all_cases` is accepted only when every case is ready. `ready_cases_only` explicitly marks remaining

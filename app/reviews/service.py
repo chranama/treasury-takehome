@@ -49,6 +49,17 @@ class ReviewService:
     adapter: ExtractionAdapter | None
     attempt_gate: AttemptGate | None
 
+    async def admit_source(self, source_identity: str) -> None:
+        """Apply the public source throttle without creating a provider submission."""
+
+        gate = self.attempt_gate
+        if gate is None:
+            return
+        try:
+            await gate.admit_source(source_identity)
+        except AttemptRejected as error:
+            raise self._attempt_error(error) from error
+
     async def process(
         self,
         *,
@@ -64,75 +75,14 @@ class ReviewService:
                 upload,
                 temp_dir=self.settings.temp_dir,
             ) as prepared:
-                adapter = self.adapter
-                if adapter is None:
-                    raise ReviewApiError(
-                        ApplicationErrorCategory.LIVE_EXTRACTION_DISABLED,
-                        "Live label extraction is not available.",
-                    )
-                processing_mode = self._processing_mode()
-                gate = self.attempt_gate
-                if gate is None:
-                    raise ReviewApiError(
-                        ApplicationErrorCategory.LIVE_EXTRACTION_DISABLED,
-                        "Live label extraction is not available.",
-                    )
-
-                try:
-                    async with gate.submission(
-                        correlation_id=correlation_id,
-                        idempotency_key=idempotency_key,
-                        source_identity=source_identity,
-                    ) as submission:
-                        try:
-                            async with asyncio.timeout(self.settings.extraction_timeout_seconds):
-                                raw_observations = await self._extract_with_retries(
-                                    adapter,
-                                    prepared,
-                                    submission,
-                                    processing_mode,
-                                )
-                        except TimeoutError as error:
-                            await submission.fail(ExtractionErrorKind.TIMEOUT.value)
-                            raise ReviewApiError(
-                                ApplicationErrorCategory.PROVIDER_TIMEOUT,
-                                "Label extraction timed out. Try again.",
-                            ) from error
-                        except ExtractionError as error:
-                            await submission.fail(error.kind.value)
-                            raise
-
-                        try:
-                            observations = ExtractionObservations.model_validate(raw_observations)
-                        except ValidationError as error:
-                            await submission.fail(ExtractionErrorKind.MALFORMED_OUTPUT.value)
-                            raise ReviewApiError(
-                                ApplicationErrorCategory.MALFORMED_PROVIDER_OUTPUT,
-                                "The extraction response could not be validated. Try again.",
-                            ) from error
-
-                        duration_ms = max(0, int((perf_counter() - started_at) * 1000))
-                        review = compare_review(
-                            expected,
-                            observations,
-                            processing_duration_ms=duration_ms,
-                        )
-                        status_counts = {
-                            status: sum(check.status == status for check in review.checks)
-                            for status in CheckStatus
-                        }
-                        await submission.complete(
-                            outcome=review.outcome.value,
-                            match_count=status_counts[CheckStatus.MATCH],
-                            mismatch_count=status_counts[CheckStatus.MISMATCH],
-                            needs_review_count=status_counts[CheckStatus.NEEDS_REVIEW],
-                        )
-                        return ReviewProcessResult(
-                            review=review,
-                            processing_mode=processing_mode,
-                        )
-                except AttemptRejected as error:
-                    raise self._attempt_error(error) from error
+                return await self._process_prepared(
+                    expected=expected,
+                    prepared=prepared,
+                    correlation_id=correlation_id,
+                    idempotency_key=idempotency_key,
+                    source_identity=source_identity,
+                    started_at=started_at,
+                )
         except ImageIntakeError as error:
             status_code = 413 if error.kind == ImageIntakeErrorKind.UPLOAD_TOO_LARGE else 422
             raise ReviewApiError(
@@ -142,6 +92,110 @@ class ReviewService:
             ) from error
         except ExtractionError as error:
             raise self._extraction_error(error) from error
+
+    async def process_prepared(
+        self,
+        *,
+        expected: ExpectedReview,
+        prepared: PreparedImage,
+        correlation_id: str,
+        idempotency_key: str,
+    ) -> ReviewProcessResult:
+        """Process one already-validated internal case without public source admission."""
+
+        try:
+            return await self._process_prepared(
+                expected=expected,
+                prepared=prepared,
+                correlation_id=correlation_id,
+                idempotency_key=idempotency_key,
+                source_identity=None,
+                started_at=perf_counter(),
+            )
+        except ExtractionError as error:
+            raise self._extraction_error(error) from error
+
+    async def _process_prepared(
+        self,
+        *,
+        expected: ExpectedReview,
+        prepared: PreparedImage,
+        correlation_id: str,
+        idempotency_key: str,
+        source_identity: str | None,
+        started_at: float,
+    ) -> ReviewProcessResult:
+        adapter = self.adapter
+        gate = self.attempt_gate
+        if adapter is None or gate is None:
+            raise ReviewApiError(
+                ApplicationErrorCategory.LIVE_EXTRACTION_DISABLED,
+                "Live label extraction is not available.",
+            )
+        processing_mode = self._processing_mode()
+        submission_context = (
+            gate.submission(
+                correlation_id=correlation_id,
+                idempotency_key=idempotency_key,
+                source_identity=source_identity,
+            )
+            if source_identity is not None
+            else gate.internal_submission(
+                correlation_id=correlation_id,
+                idempotency_key=idempotency_key,
+            )
+        )
+        try:
+            async with submission_context as submission:
+                try:
+                    async with asyncio.timeout(self.settings.extraction_timeout_seconds):
+                        raw_observations = await self._extract_with_retries(
+                            adapter,
+                            prepared,
+                            submission,
+                            processing_mode,
+                        )
+                except TimeoutError as error:
+                    await submission.fail(ExtractionErrorKind.TIMEOUT.value)
+                    raise ReviewApiError(
+                        ApplicationErrorCategory.PROVIDER_TIMEOUT,
+                        "Label extraction timed out. Try again.",
+                    ) from error
+                except ExtractionError as error:
+                    await submission.fail(error.kind.value)
+                    raise
+
+                try:
+                    observations = ExtractionObservations.model_validate(raw_observations)
+                except ValidationError as error:
+                    await submission.fail(ExtractionErrorKind.MALFORMED_OUTPUT.value)
+                    raise ReviewApiError(
+                        ApplicationErrorCategory.MALFORMED_PROVIDER_OUTPUT,
+                        "The extraction response could not be validated. Try again.",
+                    ) from error
+
+                duration_ms = max(0, int((perf_counter() - started_at) * 1000))
+                review = compare_review(
+                    expected,
+                    observations,
+                    processing_duration_ms=duration_ms,
+                )
+                status_counts = {
+                    status: sum(check.status == status for check in review.checks)
+                    for status in CheckStatus
+                }
+                await submission.complete(
+                    outcome=review.outcome.value,
+                    match_count=status_counts[CheckStatus.MATCH],
+                    mismatch_count=status_counts[CheckStatus.MISMATCH],
+                    needs_review_count=status_counts[CheckStatus.NEEDS_REVIEW],
+                )
+                return ReviewProcessResult(
+                    review=review,
+                    processing_mode=processing_mode,
+                )
+        except AttemptRejected as error:
+            raise self._attempt_error(error) from error
 
     async def _extract_with_retries(
         self,

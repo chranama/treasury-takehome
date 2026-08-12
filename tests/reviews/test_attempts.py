@@ -321,6 +321,42 @@ def test_global_concurrency_is_two(tmp_path: Path) -> None:
     asyncio.run(run())
 
 
+def test_internal_batch_cases_and_public_reviews_share_global_concurrency(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "usage.sqlite3"
+    initialize_database(database_path)
+    gate = make_gate(database_path)
+
+    async def run() -> None:
+        release = asyncio.Event()
+        entered = [asyncio.Event(), asyncio.Event()]
+
+        async def hold_internal(index: int) -> None:
+            async with gate.internal_submission(
+                correlation_id=f"batch-case-{index}",
+                idempotency_key=f"batch-case-key-{index}",
+            ) as submission:
+                entered[index].set()
+                await release.wait()
+                await submission.fail("test_complete")
+
+        tasks = [asyncio.create_task(hold_internal(0)), asyncio.create_task(hold_internal(1))]
+        await asyncio.gather(*(event.wait() for event in entered))
+        with pytest.raises(AttemptRejected) as captured:
+            async with gate.submission(
+                correlation_id="public-review",
+                idempotency_key="public-review-key",
+                source_identity="source-public",
+            ):
+                pass
+        assert captured.value.kind == AttemptRejectionKind.CAPACITY_REACHED
+        release.set()
+        await asyncio.gather(*tasks)
+
+    asyncio.run(run())
+
+
 def test_source_throttle_is_distinct_and_does_not_store_source(tmp_path: Path) -> None:
     database_path = tmp_path / "usage.sqlite3"
     initialize_database(database_path)

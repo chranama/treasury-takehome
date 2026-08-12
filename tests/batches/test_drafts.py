@@ -250,6 +250,39 @@ def test_expiry_cleanup_removes_database_content_and_orphaned_images(tmp_path: P
     asyncio.run(run())
 
 
+def test_periodic_cleanup_preserves_an_unexpired_processing_image(tmp_path: Path) -> None:
+    clock = MutableClock(datetime(2026, 8, 12, 12, tzinfo=UTC))
+    service = make_service(tmp_path, clock)
+
+    async def run() -> None:
+        draft = await create_draft(
+            service,
+            [["APP-1", "label.png", "Brand", "Bourbon", "45", "750 mL"]],
+            [upload(png_bytes(), filename="label.png")],
+        )
+        stored = next(service.image_dir.iterdir())
+        with connect(service.database_path) as connection:
+            connection.execute(
+                "UPDATE batch_reviews SET status = 'processing' WHERE batch_id = ?",
+                (str(draft.batch_id),),
+            )
+            connection.execute(
+                "UPDATE batch_cases SET status = 'processing' WHERE batch_id = ?",
+                (str(draft.batch_id),),
+            )
+            connection.execute(
+                "UPDATE batch_images SET status = 'processing' WHERE batch_id = ?",
+                (str(draft.batch_id),),
+            )
+
+        result = await service.cleanup_expired_and_orphaned()
+
+        assert result.deleted_file_count == 0
+        assert stored.is_file()
+
+    asyncio.run(run())
+
+
 def test_startup_and_periodic_cleanup_enforce_expiry(tmp_path: Path) -> None:
     clock = MutableClock(datetime(2026, 8, 12, 12, tzinfo=UTC))
     creator = make_service(tmp_path, clock)

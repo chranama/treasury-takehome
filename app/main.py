@@ -18,6 +18,7 @@ from app.api.reviews import router as reviews_router
 from app.api.system import router as system_router
 from app.batches.drafts import BatchDraftService
 from app.batches.limits import MAX_AGGREGATE_UPLOAD_BYTES
+from app.batches.processing import BatchProcessingService
 from app.config import Settings, get_settings
 from app.db import initialize_database
 from app.extraction import (
@@ -75,6 +76,17 @@ def create_app(
                 max_attempts_per_submission=resolved_settings.openai_transient_retries + 1,
             )
 
+    review_service = ReviewService(
+        settings=resolved_settings,
+        adapter=resolved_adapter,
+        attempt_gate=resolved_attempt_gate,
+    )
+    batch_processing_service = BatchProcessingService(
+        database_path=resolved_settings.database_path,
+        image_dir=resolved_settings.batch_image_dir,
+        review_service=review_service,
+    )
+
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         try:
@@ -83,8 +95,10 @@ def create_app(
             await batch_draft_service.start()
             if isinstance(resolved_attempt_gate, SQLiteUsageGate):
                 await resolved_attempt_gate.reconcile_incomplete()
+            await batch_processing_service.start()
             yield
         finally:
+            await batch_processing_service.aclose()
             await batch_draft_service.aclose()
             if owned_openai_adapter is not None:
                 await owned_openai_adapter.aclose()
@@ -117,11 +131,8 @@ def create_app(
     install_exception_handlers(application)
     application.state.settings = resolved_settings
     application.state.batch_draft_service = batch_draft_service
-    application.state.review_service = ReviewService(
-        settings=resolved_settings,
-        adapter=resolved_adapter,
-        attempt_gate=resolved_attempt_gate,
-    )
+    application.state.batch_processing_service = batch_processing_service
+    application.state.review_service = review_service
     application.include_router(system_router)
     application.include_router(reviews_router)
     application.include_router(batches_router)

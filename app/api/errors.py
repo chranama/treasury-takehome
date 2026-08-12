@@ -93,6 +93,12 @@ def install_exception_handlers(application: FastAPI) -> None:
         request: Request,
         _: RequestValidationError,
     ) -> JSONResponse:
+        if request.url.path.endswith("/start"):
+            return error_response(
+                request,
+                category=ApplicationErrorCategory.INVALID_INPUT,
+                message="Provide a valid batch selection and Idempotency-Key.",
+            )
         if request.url.path.startswith("/api/batches"):
             code = (
                 PreflightIssueCode.INVALID_IMAGE

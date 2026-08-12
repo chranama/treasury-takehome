@@ -13,12 +13,14 @@ import {
   loadBatchCase,
   preflightBatch,
   replaceBatchCaseImage,
+  startBatch,
 } from './batchApi'
 import type {
   BatchCaseDetail,
   BatchCaseSummary,
   BatchPatch,
   BatchPreflightResponse,
+  BatchResponse,
   PreflightIssue,
 } from './batchTypes'
 
@@ -366,11 +368,13 @@ function CaseCard({
 function StartConfirmation({
   draft,
   confirmRef,
+  isStarting,
   onCancel,
   onConfirm,
 }: {
-  draft: BatchPreflightResponse
+  draft: BatchResponse
   confirmRef: RefObject<HTMLButtonElement | null>
+  isStarting: boolean
   onCancel: () => void
   onConfirm: () => void
 }) {
@@ -408,7 +412,7 @@ function StartConfirmation({
           <p>Every case is ready and will be selected.</p>
         )}
         <div className="dialog-actions">
-          <button ref={confirmRef} className="primary-button compact-button" type="button" onClick={onConfirm}>Confirm ready cases</button>
+          <button ref={confirmRef} className="primary-button compact-button" type="button" disabled={isStarting} onClick={onConfirm}>{isStarting ? 'Starting batch…' : 'Confirm ready cases'}</button>
           <button ref={cancelRef} className="secondary-button" type="button" onClick={onCancel}>Cancel</button>
         </div>
       </section>
@@ -416,9 +420,9 @@ function StartConfirmation({
   )
 }
 
-function BatchDraftView({ draft, onDraftChange, onNewBatch }: {
-  draft: BatchPreflightResponse
-  onDraftChange: (draft: BatchPreflightResponse) => void
+function BatchDraftView({ draft, onBatchChange, onNewBatch }: {
+  draft: BatchResponse
+  onBatchChange: (batch: BatchResponse) => void
   onNewBatch: () => void
 }) {
   const [details, setDetails] = useState<Record<string, BatchCaseDetail>>({})
@@ -427,15 +431,17 @@ function BatchDraftView({ draft, onDraftChange, onNewBatch }: {
   const [caseErrors, setCaseErrors] = useState<Record<string, string>>({})
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [selectionNotice, setSelectionNotice] = useState('')
+  const [isStarting, setIsStarting] = useState(false)
   const startButtonRef = useRef<HTMLButtonElement>(null)
   const confirmButtonRef = useRef<HTMLButtonElement>(null)
+  const startKeyRef = useRef(`batch-start:${crypto.randomUUID()}`)
 
   useEffect(() => {
     if (showConfirmation) confirmButtonRef.current?.focus()
   }, [showConfirmation])
 
   async function refreshDraft() {
-    onDraftChange(await loadBatch(draft.batch_id))
+    onBatchChange(await loadBatch(draft.batch_id))
   }
 
   async function editCase(summary: BatchCaseSummary) {
@@ -494,6 +500,25 @@ function BatchDraftView({ draft, onDraftChange, onNewBatch }: {
     window.setTimeout(() => startButtonRef.current?.focus(), 0)
   }
 
+  async function confirmStart() {
+    setIsStarting(true)
+    setSelectionNotice('')
+    try {
+      const selection = draft.counts.needs_correction > 0 ? 'ready_cases_only' : 'all_cases'
+      const started = await startBatch(draft.batch_id, selection, startKeyRef.current)
+      setShowConfirmation(false)
+      onBatchChange(started)
+    } catch (caught) {
+      setSelectionNotice(
+        caught instanceof BatchRequestError
+          ? caught.message
+          : 'The batch could not be started. Try again.',
+      )
+    } finally {
+      setIsStarting(false)
+    }
+  }
+
   return (
     <section className="batch-draft" aria-labelledby="batch-draft-title">
       <div className="batch-draft-heading">
@@ -532,6 +557,7 @@ function BatchDraftView({ draft, onDraftChange, onNewBatch }: {
         <div>
           <h3>Ready to continue?</h3>
           <p>Only cases marked Ready can be selected for processing.</p>
+          <p>Cases finish independently. A started batch may complete partially if provider or global service capacity becomes unavailable; completed cases remain valid.</p>
         </div>
         <button
           ref={startButtonRef}
@@ -552,19 +578,37 @@ function BatchDraftView({ draft, onDraftChange, onNewBatch }: {
         <StartConfirmation
           draft={draft}
           confirmRef={confirmButtonRef}
+          isStarting={isStarting}
           onCancel={closeConfirmation}
-          onConfirm={() => {
-            setSelectionNotice(`Selection confirmed for ${draft.counts.ready} ready case${draft.counts.ready === 1 ? '' : 's'}. Processing is not enabled in this preflight preview, so no cases were submitted.`)
-            closeConfirmation()
-          }}
+          onConfirm={() => void confirmStart()}
         />
       )}
     </section>
   )
 }
 
+function BatchProcessingAccepted({ batch, onNewBatch }: {
+  batch: BatchResponse
+  onNewBatch: () => void
+}) {
+  const terminal = batch.state === 'completed' || batch.state === 'interrupted'
+  return (
+    <section className="empty-results processing-results" role="status">
+      {!terminal && <span className="large-spinner" aria-hidden="true" />}
+      <p className="step-label">Batch step 3</p>
+      <h2>{terminal ? 'Batch processing finished' : 'Batch processing started'}</h2>
+      <p>
+        {batch.counts.completed} completed, {batch.counts.failed} failed, and{' '}
+        {batch.counts.queued + batch.counts.processing} still active.
+      </p>
+      <p>Detailed polling and result review are added in the next milestone. Refreshing this page safely recovers the current durable state.</p>
+      <button className="secondary-button" type="button" onClick={onNewBatch}>Start a new batch</button>
+    </section>
+  )
+}
+
 export function BatchWorkflow() {
-  const [draft, setDraft] = useState<BatchPreflightResponse | null>(null)
+  const [draft, setDraft] = useState<BatchResponse | null>(null)
   const [isRecovering, setIsRecovering] = useState(Boolean(batchIdFromUrl()))
   const [recoveryError, setRecoveryError] = useState('')
 
@@ -599,11 +643,24 @@ export function BatchWorkflow() {
     return <section className="empty-results processing-results" role="status"><span className="large-spinner" aria-hidden="true" /><h2>Recovering batch draft</h2><p>Loading the saved preflight results.</p></section>
   }
 
-  if (draft) {
+  if (draft?.state === 'draft') {
     return (
       <BatchDraftView
         draft={draft}
-        onDraftChange={setDraft}
+        onBatchChange={setDraft}
+        onNewBatch={() => {
+          writeBatchId(null)
+          setDraft(null)
+          setRecoveryError('')
+        }}
+      />
+    )
+  }
+
+  if (draft) {
+    return (
+      <BatchProcessingAccepted
+        batch={draft}
         onNewBatch={() => {
           writeBatchId(null)
           setDraft(null)

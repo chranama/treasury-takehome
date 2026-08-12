@@ -3,6 +3,7 @@ import type {
   BatchCaseSummary,
   BatchPatch,
   BatchPreflightResponse,
+  BatchResponse,
   BatchStateCounts,
   PreflightIssue,
 } from './batchTypes'
@@ -30,7 +31,16 @@ function isCaseSummary(value: unknown): value is BatchCaseSummary {
     typeof value.row_number === 'number' &&
     typeof value.application_id === 'string' &&
     typeof value.label_image_filename === 'string' &&
-    (value.state === 'ready' || value.state === 'needs_correction') &&
+    [
+      'needs_correction',
+      'ready',
+      'queued',
+      'processing',
+      'completed',
+      'failed',
+      'interrupted',
+      'not_selected',
+    ].includes(String(value.state)) &&
     Array.isArray(value.issues) &&
     value.issues.every(isIssue)
   )
@@ -51,11 +61,13 @@ function isCounts(value: unknown): value is BatchStateCounts {
   ].every((field) => typeof value[field] === 'number' && value[field] >= 0)
 }
 
-function isBatch(value: unknown): value is BatchPreflightResponse {
+function isBatch(value: unknown): value is BatchResponse {
   if (!isRecord(value)) return false
   return (
     typeof value.batch_id === 'string' &&
-    value.state === 'draft' &&
+    ['draft', 'queued', 'processing', 'completed', 'interrupted'].includes(
+      String(value.state),
+    ) &&
     typeof value.created_at === 'string' &&
     typeof value.expires_at === 'string' &&
     isCounts(value.counts) &&
@@ -150,15 +162,30 @@ export async function preflightBatch(
   const body = new FormData()
   body.set('spreadsheet', spreadsheet)
   images.forEach((image) => body.append('images', image))
-  return (await requestJson('/api/batches/preflight', { method: 'POST', body }, isBatch)) as (
-    BatchPreflightResponse
-  )
+  return (await requestJson('/api/batches/preflight', { method: 'POST', body }, isBatch)) as BatchPreflightResponse
 }
 
-export async function loadBatch(batchId: string): Promise<BatchPreflightResponse> {
-  return (await requestJson(`/api/batches/${batchId}`, undefined, isBatch)) as (
-    BatchPreflightResponse
-  )
+export async function loadBatch(batchId: string): Promise<BatchResponse> {
+  return (await requestJson(`/api/batches/${batchId}`, undefined, isBatch)) as BatchResponse
+}
+
+export async function startBatch(
+  batchId: string,
+  selection: 'all_cases' | 'ready_cases_only',
+  idempotencyKey: string,
+): Promise<BatchResponse> {
+  return (await requestJson(
+    `/api/batches/${batchId}/start`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify({ selection }),
+    },
+    isBatch,
+  )) as BatchResponse
 }
 
 export async function loadBatchCase(

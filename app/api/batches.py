@@ -3,9 +3,10 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Body, File, Request, UploadFile
+from fastapi import APIRouter, Body, File, Header, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 
+from app.api.client_identity import source_identity
 from app.api.correlation import correlation_id_from_scope, elapsed_ms_from_scope
 from app.batches import (
     BatchCaseDetail,
@@ -15,6 +16,8 @@ from app.batches import (
     BatchField,
     BatchPreflightErrorResponse,
     BatchPreflightResponse,
+    BatchResponse,
+    BatchStartRequest,
     PreflightIssue,
     PreflightIssueCode,
     PreflightIssueScope,
@@ -27,6 +30,11 @@ from app.batches.drafts import (
     DraftNotFoundError,
     DraftValidationError,
 )
+from app.batches.limits import (
+    START_IDEMPOTENCY_KEY_MAX_CHARACTERS,
+    START_IDEMPOTENCY_KEY_MIN_CHARACTERS,
+)
+from app.batches.processing import BatchProcessingError, BatchProcessingService
 from app.storage import ImageIntakeError, ImageIntakeErrorKind
 
 router = APIRouter(prefix="/api", tags=["batches"])
@@ -73,6 +81,8 @@ async def preflight_batch(
     images: Annotated[list[UploadFile] | None, File()] = None,
 ) -> BatchPreflightResponse | JSONResponse:
     selected_images = images or []
+    processing: BatchProcessingService = request.app.state.batch_processing_service
+    await processing.admit_source(source_identity(request, request.app.state.settings))
     service: BatchDraftService = request.app.state.batch_draft_service
     async with prepare_batch_preflight(
         spreadsheet,
@@ -95,18 +105,18 @@ async def preflight_batch(
 
 @router.get(
     "/batches/{batch_id}",
-    response_model=BatchPreflightResponse,
+    response_model=BatchResponse,
     responses={404: {"model": BatchErrorResponse}},
 )
-async def get_batch(request: Request, batch_id: str) -> BatchPreflightResponse | JSONResponse:
+async def get_batch(request: Request, batch_id: str) -> BatchResponse | JSONResponse:
     parsed_batch_id = _identifier(batch_id)
     if parsed_batch_id is None:
         return _batch_error(request, BatchErrorCode.NOT_FOUND)
-    service: BatchDraftService = request.app.state.batch_draft_service
-    draft = await service.get_draft(parsed_batch_id)
-    if draft is None:
+    service: BatchProcessingService = request.app.state.batch_processing_service
+    batch = await service.get_batch(parsed_batch_id)
+    if batch is None:
         return _batch_error(request, BatchErrorCode.NOT_FOUND)
-    return draft
+    return batch
 
 
 @router.get(
@@ -122,11 +132,49 @@ async def get_batch_case(
     identifiers = _identifiers(batch_id, case_id)
     if identifiers is None:
         return _batch_error(request, BatchErrorCode.NOT_FOUND)
-    service: BatchDraftService = request.app.state.batch_draft_service
+    service: BatchProcessingService = request.app.state.batch_processing_service
     detail = await service.get_case(*identifiers)
     if detail is None:
         return _batch_error(request, BatchErrorCode.NOT_FOUND)
     return detail
+
+
+@router.post(
+    "/batches/{batch_id}/start",
+    response_model=BatchResponse,
+    status_code=202,
+    responses={
+        404: {"model": BatchErrorResponse},
+        409: {"model": BatchErrorResponse},
+    },
+)
+async def start_batch(
+    request: Request,
+    batch_id: str,
+    start: Annotated[BatchStartRequest, Body()],
+    idempotency_key: Annotated[
+        str,
+        Header(
+            alias="Idempotency-Key",
+            min_length=START_IDEMPOTENCY_KEY_MIN_CHARACTERS,
+            max_length=START_IDEMPOTENCY_KEY_MAX_CHARACTERS,
+        ),
+    ],
+) -> BatchResponse | JSONResponse:
+    parsed_batch_id = _identifier(batch_id)
+    if parsed_batch_id is None:
+        return _batch_error(request, BatchErrorCode.NOT_FOUND)
+    service: BatchProcessingService = request.app.state.batch_processing_service
+    try:
+        batch = await service.start_batch(
+            batch_id=parsed_batch_id,
+            selection=start.selection,
+            idempotency_key=idempotency_key,
+            source_identity=source_identity(request, request.app.state.settings),
+        )
+    except BatchProcessingError as error:
+        return _batch_error(request, error.code)
+    return ResponseWithModel(batch, status_code=202, headers={})
 
 
 @router.patch(
@@ -204,7 +252,7 @@ async def replace_batch_case_image(
 class ResponseWithModel(JSONResponse):
     def __init__(
         self,
-        model: BatchPreflightResponse,
+        model: BatchResponse,
         *,
         status_code: int,
         headers: dict[str, str],
