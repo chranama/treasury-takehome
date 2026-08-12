@@ -24,6 +24,7 @@ The application root contains immutable `releases/<full-commit>` directories and
 - `preflight-host.sh` repeats the safe, read-only host checks.
 - `build-release.sh` validates a clean `main`, runs non-network checks, builds the frontend, and creates a commit-attributed archive and SHA-256 file.
 - `install-release.sh` verifies and installs that archive, creates an Intel-native locked Python 3.12 environment, and atomically activates it without restarting the service.
+- `install-service.sh` validates the active release and protected configuration, then installs and loads the one-time system LaunchDaemon without replacing an existing service.
 - `rollback-release.sh` activates an already installed, schema-compatible release without changing SQLite or restarting the service.
 - `start-label-review.sh` validates the protected environment, fixes production paths, and starts the selected release.
 - `run_server.py` fixes the single-process listener and provides bounded runtime logging without request access logs.
@@ -62,7 +63,16 @@ Installation creates protected data directories, verifies the artifact, installs
 
 Copy `treasury.env.example` to the protected environment path, replace placeholders privately, and set mode 600. Begin with live extraction disabled. The wrapper supplies production mode and the database, temporary, frontend, and log paths; those values do not belong in the protected file.
 
-Install the plist only after one release and the protected data directory exist. The plist is a template because installation in `/Library/LaunchDaemons` and launchctl operations are deliberate privileged D1 actions.
+Install the system service only after one release and the protected data directory exist. The
+installer requires administrator authorization, refuses an existing plist or loaded service, and
+removes a newly installed plist if launchd loading fails:
+
+```bash
+sudo /Users/chranama-server/treasury-takehome/current/deploy/macos/install-service.sh
+```
+
+This is a one-time D1 action. Release upgrades change `current` and restart the already installed
+service separately; they do not rerun the installer.
 
 ## Verify and smoke test
 

@@ -3,6 +3,8 @@ set -euo pipefail
 
 PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 export PATH
+export LANG=C
+export LC_ALL=C
 umask 077
 
 APP_ROOT="${TREASURY_DEPLOY_APP_ROOT:-/Users/chranama-server/treasury-takehome}"

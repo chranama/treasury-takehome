@@ -19,6 +19,7 @@ SHELL_ASSETS = [
     "build-release.sh",
     "check-service.sh",
     "install-release.sh",
+    "install-service.sh",
     "preflight-host.sh",
     "rollback-release.sh",
     "start-label-review.sh",
@@ -55,6 +56,21 @@ def test_launchd_template_fixes_single_process_and_private_service_identity() ->
     assert payload["Umask"] == 0o77
     assert payload["StandardOutPath"].endswith("/logs/bootstrap.log")
     assert payload["StandardErrorPath"] == payload["StandardOutPath"]
+
+
+def test_service_installer_is_one_time_root_scoped_and_fail_safe() -> None:
+    content = (DEPLOY_ROOT / "install-service.sh").read_text(encoding="utf-8")
+
+    assert '"$(/usr/bin/id -u)" -eq 0' in content
+    assert 'PLIST_TARGET="/Library/LaunchDaemons/$SERVICE_LABEL.plist"' in content
+    assert 'launchctl bootstrap system "$PLIST_TARGET"' in content
+    assert 'launchctl print "$SERVICE_TARGET"' in content
+    assert "service plist already exists; refusing to replace it" in content
+    assert "service is already loaded; refusing to replace it" in content
+    assert "lsof -nP -iTCP:8081 -sTCP:LISTEN" in content
+    assert 'launchctl bootout "$SERVICE_TARGET"' in content
+    assert 'rm -f -- "$PLIST_TARGET"' in content
+    assert "LaunchAgents" not in content
 
 
 def test_runtime_logging_is_bounded_and_access_log_is_disabled(tmp_path: Path) -> None:
