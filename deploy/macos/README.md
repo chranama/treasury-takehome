@@ -23,6 +23,7 @@ The application root contains immutable `releases/<full-commit>` directories and
 
 - `preflight-host.sh` repeats the safe, read-only host checks.
 - `build-release.sh` validates a clean `main`, runs non-network checks, builds the frontend, and creates a commit-attributed archive and SHA-256 file.
+- `deploy-release.sh` orchestrates a deliberate local build, private transfer, installation, guarded restart, and exact-release verification on `mealcheck-server`.
 - `install-release.sh` verifies and installs that archive, creates an Intel-native locked Python 3.12 environment, and atomically activates it without restarting the service.
 - `install-service.sh` validates the active release and protected configuration, then installs and loads the one-time system LaunchDaemon without replacing an existing service.
 - `restart-service.sh` requires confirmation that no review is active, then asks launchd to replace the account-owned process and verifies its release, listener, health, and readiness.
@@ -49,6 +50,27 @@ deploy/macos/build-release.sh
 ```
 
 The default output is the ignored `.data/releases/` directory. The archive includes the Git-tracked source, locked dependencies, compiled `frontend/dist`, full release commit, and UTC build time. The script runs backend tests and Ruff checks, frontend tests/lint/build, and the Chromium browser suite before creating the archive. Ordinary release checks do not use OpenAI.
+
+## Deploy a release manually
+
+After confirming that no label review is active, run this from the original `main` worktree:
+
+```bash
+deploy/macos/deploy-release.sh --confirm-no-active-reviews
+```
+
+The orchestrator fetches `origin/main` and refuses a dirty, unpushed, stale, or non-`main`
+checkout. It verifies the current server release, runs the complete release build in a fresh local
+directory, creates a private staging directory on `mealcheck-server`, transfers the archive,
+checksum, and installer, activates the immutable release, and invokes the existing guarded
+restart. It succeeds only when the server reports the exact local commit and passes localhost
+health and readiness checks. Local and remote staging files are removed when the command exits.
+
+The server does not clone or pull the repository and receives no GitHub credential. Pushing
+`main` does not deploy it; running this command is the explicit release decision. If a check fails
+after activation, the command reports the previous commit and inspection steps but does not
+silently roll back. Confirm database compatibility and active work before any manual rollback or
+restart.
 
 ## Install without starting the service
 

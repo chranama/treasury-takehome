@@ -18,6 +18,7 @@ DEPLOY_ROOT = PROJECT_ROOT / "deploy" / "macos"
 SHELL_ASSETS = [
     "build-release.sh",
     "check-service.sh",
+    "deploy-release.sh",
     "install-release.sh",
     "install-service.sh",
     "preflight-host.sh",
@@ -87,6 +88,38 @@ def test_service_restart_is_confirmation_gated_and_release_aware() -> None:
     assert "new_listener=$(" in content
     assert 'check-service.sh" local' in content
     assert "sudo" not in content
+
+
+def test_manual_deployment_orchestrator_is_deliberate_and_commit_attributed() -> None:
+    path = DEPLOY_ROOT / "deploy-release.sh"
+    content = path.read_text(encoding="utf-8")
+
+    unconfirmed = subprocess.run(
+        [str(path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert unconfirmed.returncode != 0
+    assert "usage: deploy-release.sh --confirm-no-active-reviews" in unconfirmed.stderr
+
+    assert '"$(git branch --show-current)" = "main"' in content
+    assert "git status --porcelain --untracked-files=all" in content
+    assert '"$upstream" = "origin/main"' in content
+    assert "git fetch --quiet origin main" in content
+    assert '"$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"' in content
+    assert 'build-release.sh" "$local_output"' in content
+    assert "/usr/bin/mktemp -d" in content
+    assert 'scp "$archive" "$checksum" "$installer"' in content
+    assert 'install-release.sh" \\' in content
+    assert 'restart-service.sh" \\' in content
+    assert '"$active_commit" = "$commit"' in content
+    assert 'check-service.sh" local' in content
+    assert "trap cleanup EXIT" in content
+    assert "cleanup_failed=1" in content
+    assert "Automatic rollback was not attempted" in content
+    assert "git pull" not in content
+    assert "git clone" not in content
 
 
 def test_runtime_logging_is_bounded_and_access_log_is_disabled(tmp_path: Path) -> None:
