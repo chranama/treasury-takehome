@@ -362,6 +362,12 @@ class BatchPreflightResponse(BatchResponse):
     state: Literal[BatchState.DRAFT] = BatchState.DRAFT
 
 
+class BatchPreflightErrorResponse(BatchContractModel):
+    issues: Annotated[list[PreflightIssue], Field(min_length=1, max_length=20)]
+    correlation_id: UUID
+    processing_duration_ms: Annotated[int, Field(ge=0)]
+
+
 class BatchErrorCode(StrEnum):
     NOT_FOUND = "batch_not_found"
     STATE_CONFLICT = "batch_state_conflict"

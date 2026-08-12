@@ -1,6 +1,6 @@
 # P1 Batch Contracts
 
-**Status:** Milestone P1.0 contract with P1.1 parsing and P1.2 draft persistence
+**Status:** Milestone P1.0 contract through P1.3 reviewer preflight workflow
 
 **Schema proposal version:** 2
 
@@ -10,8 +10,9 @@
 
 P1.0 defines provider-neutral domain contracts, deterministic blank templates, API behavior,
 export safety, and an additive database proposal. P1.1 implements bounded workbook preflight, and
-P1.2 applies the additive migration and persists short-lived drafts. Batch routes, reviewer UI,
-provider work, and result APIs remain P1.3 through P1.5 work.
+P1.2 applies the additive migration and persists short-lived drafts. P1.3 exposes the template,
+preflight, retrieval, correction, and replacement routes and the reviewer-facing preflight UI.
+Provider work and result APIs remain P1.4 and P1.5 work.
 
 No module under `app/batches` may import the OpenAI SDK. Each selected case will eventually call
 the existing P0 review boundary independently; expected values, filenames, spreadsheet content,
@@ -152,6 +153,38 @@ Invalid expected values are retained as bounded strings for correction, while
 `normalized_expected` exists only after all expected values validate into the existing
 `ExpectedReview` model. Invalid cases never receive provider work.
 
+## P1.3 API and interface policy
+
+P1.3 makes the following concrete interaction choices:
+
+- The batch workflow is a clearly labeled mode beside the existing single-label workflow. It uses
+  separate native file controls for one spreadsheet and multiple images and never asks for a ZIP.
+- Template downloads use stable `label-review-batch.xlsx` and `label-review-batch.csv` attachment
+  names. The interface displays the 25-case, 25-image, 1 MiB spreadsheet, 10 MiB per-image, and
+  100 MiB package limits before selection.
+- A structurally valid package returns `201 Created`, a `Location` header, and a durable draft even
+  if every row needs correction. A structurally invalid package returns `413` or `422` with bounded
+  `PreflightIssue` values and no draft identifier.
+- Selecting no images is accepted at the HTTP boundary. This supports spreadsheet-first preflight;
+  affected rows receive `missing_image` and can use case-specific replacement afterward.
+- Batch summaries remain small. The UI requests case detail only when expected-value editing begins,
+  then patches the four expected fields through the existing bounded correction contract.
+- Image replacement targets a case UUID directly and updates the displayed filename. The browser
+  uses the same JPEG, PNG, and WebP restrictions as the server, while server byte validation remains
+  authoritative.
+- The browser stores the draft identifier only in the current URL query string. Refresh recovers the
+  server draft from that identifier; content and filenames are not copied into local storage.
+- Each row displays textual `Ready` or `Needs correction` status plus a symbol and plain-language
+  issues. Readiness is not communicated by color alone.
+- `Process all ready cases` is disabled when no row is ready and always opens a keyboard-focused
+  confirmation. When corrections remain, the dialog states their count and that they will not be
+  selected.
+- P1.3 does not create a start route or pretend work was queued. Confirming the UI selection reports
+  that processing is not enabled in the preflight preview. The durable idempotent start transition
+  remains P1.4 work.
+- Unknown, malformed, expired, and cross-batch identifiers return the same bounded `batch_not_found`
+  representation. There is still no batch collection/list route.
+
 ## State and result contracts
 
 Batch states are `draft`, `queued`, `processing`, `completed`, and `interrupted`. Expiry is deletion,
@@ -179,7 +212,9 @@ the bounded expected input, validated `ExpectedReview` when available, and the e
 
 ## API contract
 
-The planned route surface is:
+The complete P1 route surface is shown below. P1.3 implements the template, preflight, draft
+retrieval, case-detail, correction, and image-replacement routes; start and results remain inactive
+until their later milestones:
 
 ```text
 GET    /api/batch-template.xlsx

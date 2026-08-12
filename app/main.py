@@ -5,15 +5,19 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api.batches import router as batches_router
 from app.api.correlation import CorrelationIdMiddleware
 from app.api.errors import install_exception_handlers
 from app.api.request_limits import (
+    BATCH_CORRECTION_BODY_BYTES,
+    BATCH_PREFLIGHT_MULTIPART_OVERHEAD_BYTES,
     SINGLE_REVIEW_MULTIPART_OVERHEAD_BYTES,
     RequestBodyLimitMiddleware,
 )
 from app.api.reviews import router as reviews_router
 from app.api.system import router as system_router
 from app.batches.drafts import BatchDraftService
+from app.batches.limits import MAX_AGGREGATE_UPLOAD_BYTES
 from app.config import Settings, get_settings
 from app.db import initialize_database
 from app.extraction import (
@@ -97,7 +101,16 @@ def create_app(
         path_limits={
             "/api/reviews": (
                 DEFAULT_IMAGE_LIMITS.max_upload_bytes + SINGLE_REVIEW_MULTIPART_OVERHEAD_BYTES
-            )
+            ),
+            "/api/batches/preflight": (
+                MAX_AGGREGATE_UPLOAD_BYTES + BATCH_PREFLIGHT_MULTIPART_OVERHEAD_BYTES
+            ),
+        },
+        path_pattern_limits={
+            r"/api/batches/[^/]+/cases/[^/]+": BATCH_CORRECTION_BODY_BYTES,
+            r"/api/batches/[^/]+/cases/[^/]+/image": (
+                DEFAULT_IMAGE_LIMITS.max_upload_bytes + SINGLE_REVIEW_MULTIPART_OVERHEAD_BYTES
+            ),
         },
     )
     application.add_middleware(CorrelationIdMiddleware)
@@ -111,6 +124,7 @@ def create_app(
     )
     application.include_router(system_router)
     application.include_router(reviews_router)
+    application.include_router(batches_router)
 
     frontend_index = resolved_settings.frontend_dist_path / "index.html"
     if frontend_index.is_file():

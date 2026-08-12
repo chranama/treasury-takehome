@@ -19,6 +19,29 @@ async function submitReview(page: Page) {
   await page.getByRole('button', { name: 'Review label' }).click()
 }
 
+const batchHeader =
+  'Application ID,Label Image Filename,Expected Brand,Expected Class/Type,Expected ABV,Expected Net Contents\r\n'
+
+async function openBatchWorkflow(page: Page) {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Batch preflight' }).click()
+  await expect(page.getByRole('heading', { name: 'Prepare a batch package' })).toBeVisible()
+}
+
+async function uploadBatch(page: Page, rows: string, images: string[] = ['label.png']) {
+  await page.getByLabel('Spreadsheet').setInputFiles({
+    name: 'batch.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(batchHeader + rows),
+  })
+  if (images.length > 0) {
+    await page.getByLabel('Label images').setInputFiles(
+      images.map((name) => ({ name, mimeType: 'image/png', buffer: pngPixel })),
+    )
+  }
+  await page.getByRole('button', { name: 'Check batch' }).click()
+}
+
 test('completes a clear matching review through the fake adapter', async ({ page }) => {
   await page.goto('/')
   await submitReview(page)
@@ -45,10 +68,75 @@ test('provides a visible keyboard focus path into the form', async ({ page }) =>
   await page.keyboard.press('Tab')
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused()
   await page.keyboard.press('Tab')
+  await expect(page.getByRole('button', { name: 'Single label' })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('button', { name: 'Batch preflight' })).toBeFocused()
+  await page.keyboard.press('Tab')
   await expect(page.getByLabel('Expected brand name')).toBeFocused()
 
   const outlineStyle = await page.getByLabel('Expected brand name').evaluate((element) =>
     getComputedStyle(element).outlineStyle,
   )
   expect(outlineStyle).toBe('solid')
+})
+
+test('preflights a valid package and recovers it after refresh', async ({ page }) => {
+  await openBatchWorkflow(page)
+  await uploadBatch(page, 'APP-1,label.png,Brand,Bourbon,45,750 mL\r\n')
+
+  await expect(page.getByRole('heading', { name: 'Review preflight results' })).toBeVisible()
+  await expect(page.locator('.count-ready strong')).toHaveText('1')
+  await expect(page.locator('.count-correction strong')).toHaveText('0')
+  await expect(page.getByText('Ready', { exact: true }).last()).toBeVisible()
+  await expect(page).toHaveURL(/\?batch=[0-9a-f-]+$/)
+
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Review preflight results' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'APP-1' })).toBeVisible()
+})
+
+test('corrects a mixed package and explicitly confirms ready-only selection', async ({ page }) => {
+  await openBatchWorkflow(page)
+  await uploadBatch(
+    page,
+    'APP-1,label.png,Brand,Bourbon,45,750 mL\r\n' +
+      'APP-2,missing.png,Brand,Bourbon,101,750 mL\r\n',
+  )
+
+  await expect(page.locator('.count-ready strong')).toHaveText('1')
+  await expect(page.locator('.count-correction strong')).toHaveText('1')
+  await page.getByRole('button', { name: 'Process all ready cases' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByText(/1 case still need correction/i)).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Confirm ready cases' })).toBeFocused()
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+
+  const secondCase = page.locator('.batch-case').filter({ hasText: 'APP-2' })
+  await secondCase.getByRole('button', { name: 'Edit expected values' }).click()
+  await secondCase.getByLabel('Expected ABV').fill('45')
+  await secondCase.getByRole('button', { name: 'Save expected values' }).click()
+  await expect(secondCase.getByText('Select the label image named by this row.')).toBeVisible()
+  await secondCase.getByLabel('Replace image for row 3').setInputFiles({
+    name: 'replacement.png',
+    mimeType: 'image/png',
+    buffer: pngPixel,
+  })
+
+  await expect(page.locator('.count-ready strong')).toHaveText('2')
+  await expect(page.locator('.count-correction strong')).toHaveText('0')
+  await page.getByRole('button', { name: 'Process all ready cases' }).click()
+  await page.getByRole('button', { name: 'Confirm ready cases' }).click()
+  await expect(page.getByRole('status')).toContainText('Selection confirmed for 2 ready cases')
+})
+
+test('keeps an entirely invalid package as an understandable correction draft', async ({ page }) => {
+  await openBatchWorkflow(page)
+  await uploadBatch(page, ',missing.png,,,101,750 oz\r\n', [])
+
+  await expect(page.getByText('Missing application ID')).toBeVisible()
+  await expect(page.getByText('Enter an application ID.')).toBeVisible()
+  await expect(page.getByText('Enter an expected ABV from 0 through 100.')).toBeVisible()
+  await expect(page.locator('.count-ready strong')).toHaveText('0')
+  await expect(page.locator('.count-correction strong')).toHaveText('1')
+  await expect(page.getByRole('button', { name: 'Process all ready cases' })).toBeDisabled()
 })

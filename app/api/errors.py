@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -6,6 +7,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.correlation import correlation_id_from_scope, elapsed_ms_from_scope
+from app.batches import (
+    BatchPreflightErrorResponse,
+    PreflightIssue,
+    PreflightIssueCode,
+    PreflightIssueScope,
+)
 from app.comparison.models import ApplicationErrorCategory
 
 
@@ -86,6 +93,23 @@ def install_exception_handlers(application: FastAPI) -> None:
         request: Request,
         _: RequestValidationError,
     ) -> JSONResponse:
+        if request.url.path.startswith("/api/batches"):
+            code = (
+                PreflightIssueCode.INVALID_IMAGE
+                if request.url.path.endswith("/image")
+                else PreflightIssueCode.UNSUPPORTED_SPREADSHEET
+            )
+            correlation_id = UUID(correlation_id_from_scope(request.scope))
+            payload = BatchPreflightErrorResponse(
+                issues=[PreflightIssue(code=code, scope=PreflightIssueScope.BATCH)],
+                correlation_id=correlation_id,
+                processing_duration_ms=elapsed_ms_from_scope(request.scope),
+            )
+            return JSONResponse(
+                status_code=422,
+                content=payload.model_dump(mode="json"),
+                headers={"X-Correlation-ID": str(correlation_id)},
+            )
         return error_response(
             request,
             category=ApplicationErrorCategory.INVALID_INPUT,

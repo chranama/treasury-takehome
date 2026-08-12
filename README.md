@@ -4,7 +4,7 @@ A standalone proof of concept that helps an alcohol-label reviewer compare expec
 
 ## Project status
 
-The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. The P1 batch foundation now includes contracts, bounded spreadsheet preflight, and recoverable 24-hour drafts with protected image storage; its reviewer interface and processing APIs remain planned. Public live extraction remains disabled by default while deployment work is completed.
+The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. The P1 batch workflow now includes templates, bounded spreadsheet preflight, recoverable 24-hour drafts, and an accessible correction interface; background processing and results remain planned. Public live extraction remains disabled by default while deployment work is completed.
 
 ## Demo workflow
 
@@ -101,4 +101,4 @@ The default run makes four initial model requests over versioned synthetic fixtu
 - [Project background](docs/background.md)
 - [Demo specification and assumptions](docs/specification.md)
 - [Implementation approach, tools, and assumptions](docs/implementation.md)
-- [P1 batch contracts, templates, parsing, and draft persistence](docs/p1-batch-contracts.md)
+- [P1 batch contracts, templates, parsing, draft persistence, and preflight UI](docs/p1-batch-contracts.md)
