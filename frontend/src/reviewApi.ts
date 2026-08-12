@@ -4,6 +4,7 @@ import type {
   CheckStatus,
   ErrorCategory,
   ReviewOutcome,
+  ReviewResult,
   ReviewResponse,
   ReviewSubmission,
 } from './reviewTypes'
@@ -46,7 +47,7 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string')
 }
 
-function isCheckResult(value: unknown): boolean {
+export function isCheckResult(value: unknown): boolean {
   if (!isRecord(value)) return false
 
   return (
@@ -63,7 +64,7 @@ function isCheckResult(value: unknown): boolean {
   )
 }
 
-function isReviewResponse(value: unknown): value is ReviewResponse {
+export function isReviewResult(value: unknown): value is ReviewResult {
   if (!isRecord(value)) return false
 
   return (
@@ -73,7 +74,15 @@ function isReviewResponse(value: unknown): value is ReviewResponse {
     value.checks.length === 5 &&
     value.checks.every(isCheckResult) &&
     typeof value.processing_duration_ms === 'number' &&
-    value.processing_duration_ms >= 0 &&
+    value.processing_duration_ms >= 0
+  )
+}
+
+function isReviewResponse(value: unknown): value is ReviewResponse {
+  if (!isRecord(value)) return false
+
+  return (
+    isReviewResult(value) &&
     typeof value.correlation_id === 'string' &&
     (value.processing_mode === 'synthetic' || value.processing_mode === 'live')
   )

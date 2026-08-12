@@ -151,6 +151,23 @@ def test_root_explains_when_frontend_has_not_been_built(tmp_path: Path) -> None:
     assert response.json()["status"] == "frontend_not_built"
 
 
+def test_built_frontend_serves_root_and_refresh_safe_batch_page(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    settings.frontend_dist_path.mkdir()
+    (settings.frontend_dist_path / "index.html").write_text(
+        "<!doctype html><title>Label Review</title>",
+        encoding="utf-8",
+    )
+
+    with TestClient(create_app(settings)) as client:
+        root = client.get("/")
+        batch = client.get("/batch?batch=718117a6-8284-4946-8d65-7af8c333340c")
+
+    assert root.status_code == 200
+    assert batch.status_code == 200
+    assert root.text == batch.text
+
+
 def test_p1_2_does_not_expose_a_batch_collection_endpoint(tmp_path: Path) -> None:
     application = create_app(make_settings(tmp_path))
 

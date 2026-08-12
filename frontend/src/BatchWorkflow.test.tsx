@@ -1,13 +1,15 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { BatchWorkflow } from './BatchWorkflow'
 import type {
   BatchCaseSummary,
+  BatchCaseDetail,
   BatchPreflightResponse,
   BatchResponse,
   PreflightIssue,
 } from './batchTypes'
+import type { CheckResult } from './reviewTypes'
 
 function issue(code: string, message: string, field: PreflightIssue['field']): PreflightIssue {
   return {
@@ -58,6 +60,75 @@ function batch(cases: BatchCaseSummary[]): BatchPreflightResponse {
   }
 }
 
+function startedBatch(
+  cases: BatchCaseSummary[],
+  state: BatchResponse['state'] = 'processing',
+): BatchResponse {
+  const count = (caseState: BatchCaseSummary['state']) =>
+    cases.filter((item) => item.state === caseState).length
+  return {
+    batch_id: '718117a6-8284-4946-8d65-7af8c333340c',
+    state,
+    created_at: '2026-08-12T12:00:00Z',
+    expires_at: '2026-08-13T12:00:00Z',
+    counts: {
+      total: cases.length,
+      needs_correction: count('needs_correction'),
+      ready: count('ready'),
+      queued: count('queued'),
+      processing: count('processing'),
+      completed: count('completed'),
+      failed: count('failed'),
+      interrupted: count('interrupted'),
+      not_selected: count('not_selected'),
+    },
+    cases,
+    next_poll_after_ms: state === 'queued' || state === 'processing' ? 1500 : null,
+  }
+}
+
+const checkNames = [
+  'brand_name',
+  'class_type',
+  'alcohol_content',
+  'net_contents',
+  'government_warning',
+] as const
+
+function caseDetail(caseSummary: BatchCaseSummary): BatchCaseDetail {
+  const checks: CheckResult[] = checkNames.map((name) => ({
+    name,
+    status: caseSummary.outcome === 'all_checks_passed' ? 'match' : 'mismatch',
+    expected_value: 'Expected',
+    extracted_values: ['Observed'],
+    normalized_expected: null,
+    normalized_extracted: [],
+    reason: caseSummary.short_reason ?? 'The visible value differs.',
+    limitations: [],
+  }))
+  return {
+    summary: caseSummary,
+    expected_input: {
+      brand_name: 'Brand',
+      class_type: 'Bourbon',
+      expected_abv: '45',
+      expected_net_contents: '750 mL',
+    },
+    normalized_expected: {},
+    result: caseSummary.state === 'completed' ? {
+      result: {
+        outcome: caseSummary.outcome ?? 'needs_review',
+        checks,
+        processing_duration_ms: caseSummary.processing_duration_ms ?? 1000,
+      },
+      processing_mode: 'synthetic',
+      correlation_id: '5eb714c5-28d3-457d-b4dc-a9214b59878e',
+      completed_at: '2026-08-12T12:01:00Z',
+      expires_at: '2026-08-13T12:00:00Z',
+    } : null,
+  }
+}
+
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
     status,
@@ -81,6 +152,7 @@ describe('BatchWorkflow', () => {
     cleanup()
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   it('shows templates, separate selectors, visible limits, and a valid ready draft', async () => {
@@ -208,5 +280,128 @@ describe('BatchWorkflow', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Recovering batch draft')
     expect(await screen.findByRole('heading', { name: 'Review preflight results' })).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith(`/api/batches/${recovered.batch_id}`, undefined)
+  })
+
+  it('shows terminal progress, filters outcomes, reuses comparison detail, and offers export', async () => {
+    const passed = summary({
+      state: 'completed',
+      outcome: 'all_checks_passed',
+      processing_duration_ms: 900,
+      short_reason: 'All five checks matched.',
+    })
+    const review = summary({
+      case_id: 'cc0b750d-384c-4ca2-b2d8-e8ba0eca5e68',
+      row_number: 3,
+      application_id: 'APP-2',
+      state: 'completed',
+      outcome: 'needs_review',
+      processing_duration_ms: 1200,
+      short_reason: 'Expected 750 mL, but the image shows 700 mL.',
+    })
+    const failed = summary({
+      case_id: 'fb939d25-81bd-4bd5-bfd6-80607c5261cc',
+      row_number: 4,
+      application_id: 'APP-3',
+      state: 'failed',
+      short_reason: 'The extraction service was unavailable.',
+    })
+    const completed = startedBatch([passed, review, failed], 'completed')
+    window.history.replaceState({}, '', `/batch?batch=${completed.batch_id}`)
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(completed))
+      .mockResolvedValueOnce(jsonResponse(caseDetail(review)))
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<BatchWorkflow />)
+
+    expect(await screen.findByRole('heading', { name: 'Batch processing finished' })).toBeInTheDocument()
+    expect(screen.getByText('2 / 3')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('value', '3')
+    expect(screen.getByRole('link', { name: 'Download results CSV' })).toHaveAttribute(
+      'href',
+      `/api/batches/${completed.batch_id}/results.csv`,
+    )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Needs review 1/ }))
+    expect(screen.getByRole('rowheader', { name: /APP-2/ })).toBeInTheDocument()
+    expect(screen.queryByRole('rowheader', { name: /APP-1/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'View details' }))
+
+    await screen.findByRole('heading', { name: 'APP-2' })
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'APP-2' })).toHaveFocus())
+    expect(screen.getByRole('heading', { name: 'Needs review' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Review checks' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Failed \/ interrupted 1/ }))
+    expect(screen.getByRole('rowheader', { name: /APP-3/ })).toBeInTheDocument()
+  })
+
+  it('keeps progress accurate when a later row finishes first and stops polling at terminal state', async () => {
+    vi.useFakeTimers()
+    const initial = startedBatch([
+      summary({ state: 'processing' }),
+      summary({ case_id: 'cc0b750d-384c-4ca2-b2d8-e8ba0eca5e68', row_number: 3, application_id: 'APP-2', state: 'queued' }),
+      summary({ case_id: 'fb939d25-81bd-4bd5-bfd6-80607c5261cc', row_number: 4, application_id: 'APP-3', state: 'queued' }),
+    ])
+    const outOfOrder = startedBatch([
+      initial.cases[0],
+      initial.cases[1],
+      { ...initial.cases[2], state: 'completed', outcome: 'all_checks_passed', processing_duration_ms: 800, short_reason: 'All five checks matched.' },
+    ])
+    const terminal = startedBatch([
+      { ...initial.cases[0], state: 'completed', outcome: 'needs_review', processing_duration_ms: 1100, short_reason: 'A visible value differs.' },
+      { ...initial.cases[1], state: 'failed', short_reason: 'The extraction service was unavailable.' },
+      outOfOrder.cases[2],
+    ], 'completed')
+    window.history.replaceState({}, '', `/batch?batch=${initial.batch_id}`)
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(initial))
+      .mockResolvedValueOnce(jsonResponse(outOfOrder))
+      .mockResolvedValueOnce(jsonResponse(terminal))
+    vi.stubGlobal('fetch', fetchMock)
+    render(<BatchWorkflow />)
+
+    await act(async () => { await Promise.resolve() })
+    await act(async () => { await vi.advanceTimersByTimeAsync(1500) })
+    expect(screen.getByText('1 / 3')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar')).toHaveAccessibleName(/1 of 3 selected cases finished/)
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1500) })
+    expect(screen.getByRole('heading', { name: 'Batch processing finished' })).toBeInTheDocument()
+    expect(screen.getByRole('progressbar')).toHaveAccessibleName(/3 of 3 selected cases finished/)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('backs off after a temporary polling failure and then recovers', async () => {
+    vi.useFakeTimers()
+    const active = startedBatch([summary({ state: 'processing' })])
+    const terminal = startedBatch([
+      summary({ state: 'completed', outcome: 'all_checks_passed', processing_duration_ms: 700, short_reason: 'All five checks matched.' }),
+    ], 'completed')
+    window.history.replaceState({}, '', `/batch?batch=${active.batch_id}`)
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(active))
+      .mockRejectedValueOnce(new TypeError('network unavailable'))
+      .mockResolvedValueOnce(jsonResponse(terminal))
+    vi.stubGlobal('fetch', fetchMock)
+    render(<BatchWorkflow />)
+
+    await act(async () => { await Promise.resolve() })
+    await act(async () => { await vi.advanceTimersByTimeAsync(1500) })
+    expect(screen.getByRole('status')).toHaveTextContent('Retrying in 3 seconds')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(2999) })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(screen.getByRole('heading', { name: 'Batch processing finished' })).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 })

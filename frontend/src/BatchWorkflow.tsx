@@ -23,12 +23,20 @@ import type {
   BatchResponse,
   PreflightIssue,
 } from './batchTypes'
+import { ReviewResults } from './ReviewResults'
+import type { ReviewResponse } from './reviewTypes'
 
 const MAX_SPREADSHEET_BYTES = 1024 * 1024
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const MAX_AGGREGATE_BYTES = 100 * 1024 * 1024
 const MAX_IMAGES = 25
 const SUPPORTED_SPREADSHEET_SUFFIXES = ['.csv', '.xlsx']
+const DEFAULT_POLL_INTERVAL_MS = 1500
+const MIN_POLL_INTERVAL_MS = 1000
+const MAX_POLL_INTERVAL_MS = 2000
+const MAX_POLL_BACKOFF_MS = 8000
+
+type ResultFilter = 'all' | 'needs_review' | 'failed' | 'passed'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
@@ -587,22 +595,305 @@ function BatchDraftView({ draft, onBatchChange, onNewBatch }: {
   )
 }
 
-function BatchProcessingAccepted({ batch, onNewBatch }: {
+function isTerminalBatch(batch: BatchResponse): boolean {
+  return batch.state === 'completed' || batch.state === 'interrupted'
+}
+
+function isTerminalCase(summary: BatchCaseSummary): boolean {
+  return summary.state === 'completed' || summary.state === 'failed' || summary.state === 'interrupted'
+}
+
+function matchesResultFilter(summary: BatchCaseSummary, filter: ResultFilter): boolean {
+  if (summary.state === 'not_selected') return false
+  if (filter === 'needs_review') return summary.outcome === 'needs_review'
+  if (filter === 'failed') return summary.state === 'failed' || summary.state === 'interrupted'
+  if (filter === 'passed') return summary.outcome === 'all_checks_passed'
+  return true
+}
+
+function caseStateLabel(summary: BatchCaseSummary): string {
+  if (summary.state === 'completed') return 'Completed'
+  if (summary.state === 'failed') return 'Failed'
+  if (summary.state === 'interrupted') return 'Interrupted'
+  if (summary.state === 'processing') return 'Processing'
+  return 'Queued'
+}
+
+function outcomeLabel(summary: BatchCaseSummary): string {
+  if (summary.outcome === 'all_checks_passed') return 'Passed'
+  if (summary.outcome === 'needs_review') return 'Needs review'
+  if (summary.outcome === 'unable_to_process') return 'Unable to process'
+  return '—'
+}
+
+function BatchCaseResultDetail({ detail }: { detail: BatchCaseDetail }) {
+  const stored = detail.result
+  const result: ReviewResponse | null = stored
+    ? {
+        ...stored.result,
+        correlation_id: stored.correlation_id,
+        processing_mode: stored.processing_mode,
+      }
+    : null
+
+  return (
+    <div className="batch-case-detail-content">
+      <dl className="batch-expected-values">
+        <div><dt>Expected brand</dt><dd>{detail.expected_input.brand_name}</dd></div>
+        <div><dt>Expected class/type</dt><dd>{detail.expected_input.class_type}</dd></div>
+        <div><dt>Expected ABV</dt><dd>{detail.expected_input.expected_abv}</dd></div>
+        <div><dt>Expected net contents</dt><dd>{detail.expected_input.expected_net_contents}</dd></div>
+      </dl>
+      {result ? (
+        <ReviewResults result={result} />
+      ) : (
+        <div className="case-terminal-message">
+          <h3>No comparison result is available</h3>
+          <p>{detail.summary.short_reason ?? 'This case did not complete.'}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function BatchResultsView({ batch, onBatchChange, onNewBatch }: {
   batch: BatchResponse
+  onBatchChange: (batch: BatchResponse) => void
   onNewBatch: () => void
 }) {
-  const terminal = batch.state === 'completed' || batch.state === 'interrupted'
+  const [filter, setFilter] = useState<ResultFilter>('all')
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null)
+  const [details, setDetails] = useState<Record<string, BatchCaseDetail>>({})
+  const [loadingCaseId, setLoadingCaseId] = useState<string | null>(null)
+  const [detailError, setDetailError] = useState('')
+  const [pollingNotice, setPollingNotice] = useState('')
+  const [pollingError, setPollingError] = useState('')
+  const detailHeadingRef = useRef<HTMLHeadingElement>(null)
+  const terminal = isTerminalBatch(batch)
+
+  useEffect(() => {
+    if (terminal) return
+    let active = true
+    let timer: number | undefined
+    let failureCount = 0
+    const requestedInterval = batch.next_poll_after_ms ?? DEFAULT_POLL_INTERVAL_MS
+    const interval = Math.min(
+      MAX_POLL_INTERVAL_MS,
+      Math.max(MIN_POLL_INTERVAL_MS, requestedInterval),
+    )
+
+    function schedule(delay: number) {
+      timer = window.setTimeout(() => void poll(), delay)
+    }
+
+    async function poll() {
+      try {
+        const refreshed = await loadBatch(batch.batch_id)
+        if (!active) return
+        setPollingNotice('')
+        setPollingError('')
+        onBatchChange(refreshed)
+      } catch (caught) {
+        if (!active) return
+        if (caught instanceof BatchRequestError && caught.temporary) {
+          failureCount += 1
+          const retryDelay = Math.min(
+            MAX_POLL_BACKOFF_MS,
+            interval * 2 ** failureCount,
+          )
+          setPollingNotice(`Connection interrupted. Retrying in ${Math.ceil(retryDelay / 1000)} seconds.`)
+          schedule(retryDelay)
+          return
+        }
+        setPollingError(
+          caught instanceof BatchRequestError
+            ? caught.message
+            : 'Batch progress could not be refreshed.',
+        )
+      }
+    }
+
+    schedule(interval)
+    return () => {
+      active = false
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
+  }, [batch, onBatchChange, terminal])
+
+  const selectedTotal = batch.counts.total - batch.counts.not_selected
+  const finishedTotal = batch.counts.completed + batch.counts.failed + batch.counts.interrupted
+  const activeTotal = batch.counts.queued + batch.counts.processing
+  const selectedSummary = batch.cases.find((summary) => summary.case_id === selectedCaseId)
+  const filteredCases = batch.cases.filter((summary) => matchesResultFilter(summary, filter))
+  const filterCounts: Record<ResultFilter, number> = {
+    all: selectedTotal,
+    needs_review: batch.cases.filter((summary) => summary.outcome === 'needs_review').length,
+    failed: batch.counts.failed + batch.counts.interrupted,
+    passed: batch.cases.filter((summary) => summary.outcome === 'all_checks_passed').length,
+  }
+
+  async function refreshNow() {
+    setPollingError('')
+    setPollingNotice('Refreshing batch progress…')
+    try {
+      onBatchChange(await loadBatch(batch.batch_id))
+      setPollingNotice('')
+    } catch (caught) {
+      setPollingNotice('')
+      setPollingError(
+        caught instanceof BatchRequestError ? caught.message : 'Batch progress could not be refreshed.',
+      )
+    }
+  }
+
+  async function selectCase(summary: BatchCaseSummary) {
+    setSelectedCaseId(summary.case_id)
+    setDetailError('')
+    if (details[summary.case_id]) {
+      window.setTimeout(() => detailHeadingRef.current?.focus(), 0)
+      return
+    }
+    setLoadingCaseId(summary.case_id)
+    try {
+      const detail = await loadBatchCase(batch.batch_id, summary.case_id)
+      setDetails((current) => ({ ...current, [summary.case_id]: detail }))
+      window.setTimeout(() => detailHeadingRef.current?.focus(), 0)
+    } catch (caught) {
+      setDetailError(
+        caught instanceof BatchRequestError ? caught.message : 'The case result could not be loaded.',
+      )
+    } finally {
+      setLoadingCaseId(null)
+    }
+  }
+
+  function chooseFilter(nextFilter: ResultFilter) {
+    setFilter(nextFilter)
+    if (selectedSummary && !matchesResultFilter(selectedSummary, nextFilter)) {
+      setSelectedCaseId(null)
+      setDetailError('')
+    }
+  }
+
   return (
-    <section className="empty-results processing-results" role="status">
-      {!terminal && <span className="large-spinner" aria-hidden="true" />}
-      <p className="step-label">Batch step 3</p>
-      <h2>{terminal ? 'Batch processing finished' : 'Batch processing started'}</h2>
-      <p>
-        {batch.counts.completed} completed, {batch.counts.failed} failed, and{' '}
-        {batch.counts.queued + batch.counts.processing} still active.
-      </p>
-      <p>Detailed polling and result review are added in the next milestone. Refreshing this page safely recovers the current durable state.</p>
-      <button className="secondary-button" type="button" onClick={onNewBatch}>Start a new batch</button>
+    <section className="batch-results" aria-labelledby="batch-results-title">
+      <div className="batch-results-heading">
+        <div>
+          <p className="step-label">Batch step 3</p>
+          <h2 id="batch-results-title">
+            {terminal
+              ? 'Batch processing finished'
+              : batch.state === 'queued'
+                ? 'Batch processing started'
+                : 'Batch processing in progress'}
+          </h2>
+          <p>Batch reference: {batch.batch_id}</p>
+        </div>
+        <div className="batch-results-actions">
+          {terminal && (
+            <a
+              className="primary-button compact-button"
+              href={`/api/batches/${batch.batch_id}/results.csv`}
+              download="label-review-results.csv"
+            >
+              Download results CSV
+            </a>
+          )}
+          <button className="secondary-button" type="button" onClick={onNewBatch}>Start a new batch</button>
+        </div>
+      </div>
+
+      <div className="batch-progress-panel" aria-live="polite">
+        <div className="batch-progress-copy">
+          <div><strong>{batch.counts.completed} / {selectedTotal}</strong><span>Completed</span></div>
+          <p>{finishedTotal} of {selectedTotal} selected cases finished. {activeTotal} still active.</p>
+        </div>
+        <progress
+          aria-label={`Batch progress: ${finishedTotal} of ${selectedTotal} selected cases finished`}
+          max={Math.max(1, selectedTotal)}
+          value={finishedTotal}
+        />
+        <ul className="batch-progress-breakdown" aria-label="Case state totals">
+          <li><strong>{batch.counts.completed}</strong> completed</li>
+          <li><strong>{batch.counts.failed}</strong> failed</li>
+          <li><strong>{batch.counts.interrupted}</strong> interrupted</li>
+          <li><strong>{activeTotal}</strong> active</li>
+          {batch.counts.not_selected > 0 && <li><strong>{batch.counts.not_selected}</strong> not selected</li>}
+        </ul>
+        {pollingNotice && <p className="polling-notice" role="status">{pollingNotice}</p>}
+        {pollingError && (
+          <div className="batch-error-summary" role="alert">
+            {pollingError}{' '}
+            <button className="inline-button" type="button" onClick={() => void refreshNow()}>Try again</button>
+          </div>
+        )}
+      </div>
+
+      <div className="batch-result-filters" role="group" aria-label="Filter batch results">
+        {([
+          ['all', 'All'],
+          ['needs_review', 'Needs review'],
+          ['failed', 'Failed / interrupted'],
+          ['passed', 'Passed'],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={filter === value ? 'active' : ''}
+            aria-pressed={filter === value}
+            onClick={() => chooseFilter(value)}
+          >
+            {label} <span>{filterCounts[value]}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="batch-results-table-wrap" tabIndex={0} aria-label="Scrollable batch results">
+        <table className="batch-results-table">
+          <thead><tr><th>Application</th><th>Status</th><th>Outcome</th><th>Duration</th><th>Reason</th><th><span className="sr-only">Action</span></th></tr></thead>
+          <tbody>
+            {filteredCases.map((summary) => (
+              <tr key={summary.case_id} className={selectedCaseId === summary.case_id ? 'selected' : ''}>
+                <th scope="row"><strong>{summary.application_id}</strong><span>Row {summary.row_number} · {summary.label_image_filename}</span></th>
+                <td><span className={`result-state state-${summary.state}`}>{caseStateLabel(summary)}</span></td>
+                <td>{outcomeLabel(summary)}</td>
+                <td>{summary.processing_duration_ms === null ? '—' : `${(summary.processing_duration_ms / 1000).toFixed(2)} s`}</td>
+                <td>{summary.short_reason ?? 'Waiting for processing.'}</td>
+                <td>
+                  {isTerminalCase(summary) ? (
+                    <button
+                      className="secondary-button result-view-button"
+                      type="button"
+                      aria-pressed={selectedCaseId === summary.case_id}
+                      disabled={loadingCaseId === summary.case_id}
+                      onClick={() => void selectCase(summary)}
+                    >
+                      {loadingCaseId === summary.case_id ? 'Loading…' : 'View details'}
+                    </button>
+                  ) : <span className="result-waiting">Waiting</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {filteredCases.length === 0 && <p className="empty-filter">No cases match this filter.</p>}
+
+      {selectedSummary && (
+        <section className="batch-case-result-detail" aria-labelledby="selected-case-title">
+          <div className="selected-case-heading">
+            <div>
+              <p className="step-label">Selected case</p>
+              <h2 id="selected-case-title" ref={detailHeadingRef} tabIndex={-1}>{selectedSummary.application_id}</h2>
+              <p>Spreadsheet row {selectedSummary.row_number} · {selectedSummary.label_image_filename}</p>
+            </div>
+            <button className="secondary-button" type="button" onClick={() => setSelectedCaseId(null)}>Close details</button>
+          </div>
+          {detailError ? <div className="batch-error-summary" role="alert">{detailError}</div> :
+            details[selectedSummary.case_id] ? <BatchCaseResultDetail detail={details[selectedSummary.case_id]} /> :
+              <p className="detail-loading" role="status">Loading case result…</p>}
+        </section>
+      )}
     </section>
   )
 }
@@ -659,8 +950,9 @@ export function BatchWorkflow() {
 
   if (draft) {
     return (
-      <BatchProcessingAccepted
+      <BatchResultsView
         batch={draft}
+        onBatchChange={setDraft}
         onNewBatch={() => {
           writeBatchId(null)
           setDraft(null)

@@ -12,9 +12,7 @@ import {
 import type { ApiErrorResponse, ReviewResponse, ReviewSubmission } from './reviewTypes'
 
 function App() {
-  const [workflow, setWorkflow] = useState<'single' | 'batch'>(() =>
-    new URL(window.location.href).searchParams.has('batch') ? 'batch' : 'single',
-  )
+  const batchPage = window.location.pathname === '/batch' || window.location.pathname === '/batch/'
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [result, setResult] = useState<ReviewResponse | null>(null)
   const [error, setError] = useState<ApiErrorResponse | null>(null)
@@ -67,26 +65,24 @@ function App() {
           </p>
         </section>
 
-        <div className="workflow-switcher" role="group" aria-label="Review workflow">
-          <button
-            className={workflow === 'single' ? 'active' : ''}
-            type="button"
-            aria-pressed={workflow === 'single'}
-            onClick={() => setWorkflow('single')}
+        <nav className="workflow-switcher" aria-label="Review workflow">
+          <a
+            className={!batchPage ? 'active' : ''}
+            href="/"
+            aria-current={!batchPage ? 'page' : undefined}
           >
             Single label
-          </button>
-          <button
-            className={workflow === 'batch' ? 'active' : ''}
-            type="button"
-            aria-pressed={workflow === 'batch'}
-            onClick={() => setWorkflow('batch')}
+          </a>
+          <a
+            className={batchPage ? 'active' : ''}
+            href="/batch"
+            aria-current={batchPage ? 'page' : undefined}
           >
-            Batch preflight
-          </button>
-        </div>
+            Batch review
+          </a>
+        </nav>
 
-        {workflow === 'batch' ? (
+        {batchPage ? (
           <BatchWorkflow />
         ) : (
           <div className="workflow-layout">

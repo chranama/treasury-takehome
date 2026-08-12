@@ -1,6 +1,6 @@
 # P1 Batch Contracts
 
-**Status:** Milestone P1.0 contract through P1.5 result and export APIs
+**Status:** Milestone P1.0 contract through P1.6 progress and results interface
 
 **Schema proposal version:** 2
 
@@ -13,8 +13,9 @@ export safety, and an additive database proposal. P1.1 implements bounded workbo
 P1.2 applies the additive migration and persists short-lived drafts. P1.3 exposes the template,
 preflight, retrieval, correction, and replacement routes and the reviewer-facing preflight UI.
 P1.4 adds durable idempotent start and independently processes selected cases. P1.5 completes the
-bounded polling, case-detail, outcome-summary, and safe CSV download APIs. The progress-and-results
-interface remains P1.6 work.
+bounded polling, case-detail, outcome-summary, and safe CSV download APIs. P1.6 adds the dedicated
+batch page, progress polling, triage filters, reusable P0 detail, refresh recovery, and terminal
+download interface.
 
 No module under `app/batches` may import the OpenAI SDK. Each selected case will eventually call
 the existing P0 review boundary independently; expected values, filenames, spreadsheet content,
@@ -159,7 +160,7 @@ Invalid expected values are retained as bounded strings for correction, while
 
 P1.3 makes the following concrete interaction choices:
 
-- The batch workflow is a clearly labeled mode beside the existing single-label workflow. It uses
+- The batch workflow is a clearly labeled page at `/batch` beside the single-label page at `/`. It uses
   separate native file controls for one spreadsheet and multiple images and never asks for a ZIP.
 - Template downloads use stable `label-review-batch.xlsx` and `label-review-batch.csv` attachment
   names. The interface displays the 25-case, 25-image, 1 MiB spreadsheet, 10 MiB per-image, and
@@ -260,6 +261,32 @@ P1.5 makes the following concrete representation choices:
 - Formula neutralization is applied to every rendered cell, not only fields currently expected to
   contain user or model text. Any leading `=`, `+`, `-`, `@`, tab, or carriage return receives an
   apostrophe before CSV quoting.
+
+## P1.6 progress and results interface policy
+
+P1.6 makes the following concrete interaction choices:
+
+- Single and batch review use separate refresh-safe pages: `/` and `/batch`. The batch identifier
+  remains a query parameter on `/batch`, and the production-shaped service explicitly serves the
+  frontend entry point for direct `/batch` requests.
+- The progress bar counts every selected case that reaches a terminal state (`completed`, `failed`,
+  or `interrupted`) so it can reach its maximum under partial failure. Adjacent text separately
+  reports successful completion as `completed / selected` and preserves the full state breakdown.
+- Active batches poll at the server-requested interval bounded to one through two seconds. Temporary
+  network and server failures retry exponentially up to eight seconds; terminal batches and
+  unmounted views retain no polling timer. Other errors stop automatic polling and offer an explicit
+  retry.
+- The result list excludes deliberately `not_selected` rows but reports their count in the progress
+  summary. Filters cover every selected case, exact `needs_review` outcomes, combined failed and
+  interrupted states, and exact `all_checks_passed` outcomes.
+- Terminal rows are keyboard-operable buttons. Selecting a completed row adapts the stored result
+  metadata to the unchanged P0 comparison component; failed and interrupted rows display expected
+  values and the bounded safe terminal reason without fabricating checks.
+- Loading a selected case moves focus to its detail heading. The 25-row table stays inside a
+  keyboard-focusable horizontal scroll region on narrow screens.
+- The CSV action is shown only after the batch reaches a terminal state, even though the P1.5 API
+  can represent an active batch. This keeps the primary reviewer download aligned with a stable
+  terminal snapshot.
 
 ## API contract
 

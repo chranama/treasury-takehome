@@ -1,3 +1,5 @@
+import type { ProcessingMode, ReviewResult } from './reviewTypes'
+
 export type BatchCaseState =
   | 'needs_correction'
   | 'ready'
@@ -77,7 +79,15 @@ export interface BatchCaseDetail {
   summary: BatchCaseSummary
   expected_input: BatchExpectedInput
   normalized_expected: unknown | null
-  result: unknown | null
+  result: StoredBatchCaseResult | null
+}
+
+export interface StoredBatchCaseResult {
+  result: ReviewResult
+  processing_mode: ProcessingMode
+  correlation_id: string
+  completed_at: string
+  expires_at: string
 }
 
 export interface BatchPatch {

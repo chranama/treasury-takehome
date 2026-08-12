@@ -33,10 +33,13 @@ export interface CheckResult {
   limitations: string[]
 }
 
-export interface ReviewResponse {
+export interface ReviewResult {
   outcome: ReviewOutcome
   checks: CheckResult[]
   processing_duration_ms: number
+}
+
+export interface ReviewResponse extends ReviewResult {
   correlation_id: string
   processing_mode: ProcessingMode
 }

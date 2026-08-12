@@ -65,6 +65,7 @@ function fillValidForm() {
 
 describe('App', () => {
   beforeEach(() => {
+    window.history.replaceState({}, '', '/')
     Object.defineProperty(URL, 'createObjectURL', {
       configurable: true,
       value: vi.fn(() => 'blob:label-preview'),
@@ -99,6 +100,16 @@ describe('App', () => {
     expect(screen.getByText(/up to 10 MB/i)).toBeInTheDocument()
     expect(screen.getByText(/synthetic or non-sensitive data/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Review findings appear here' })).toBeInTheDocument()
+  })
+
+  it('serves batch review as a separate page with navigation back to single review', () => {
+    window.history.replaceState({}, '', '/batch')
+    render(<App />)
+
+    expect(screen.getByRole('link', { name: 'Batch review' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Single label' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('heading', { name: 'Prepare a batch package' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Expected brand name')).not.toBeInTheDocument()
   })
 
   it('validates required values before making a request', () => {

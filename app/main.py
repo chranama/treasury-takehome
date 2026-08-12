@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.batches import router as batches_router
@@ -139,6 +139,11 @@ def create_app(
 
     frontend_index = resolved_settings.frontend_dist_path / "index.html"
     if frontend_index.is_file():
+        @application.get("/batch", include_in_schema=False)
+        @application.get("/batch/", include_in_schema=False)
+        def batch_frontend() -> FileResponse:
+            return FileResponse(frontend_index)
+
         application.mount(
             "/",
             StaticFiles(directory=resolved_settings.frontend_dist_path, html=True),

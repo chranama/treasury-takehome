@@ -7,6 +7,7 @@ import type {
   BatchStateCounts,
   PreflightIssue,
 } from './batchTypes'
+import { isReviewResult } from './reviewApi'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -42,7 +43,13 @@ function isCaseSummary(value: unknown): value is BatchCaseSummary {
       'not_selected',
     ].includes(String(value.state)) &&
     Array.isArray(value.issues) &&
-    value.issues.every(isIssue)
+    value.issues.every(isIssue) &&
+    (value.outcome === null ||
+      value.outcome === 'all_checks_passed' ||
+      value.outcome === 'needs_review' ||
+      value.outcome === 'unable_to_process') &&
+    (typeof value.processing_duration_ms === 'number' || value.processing_duration_ms === null) &&
+    (typeof value.short_reason === 'string' || value.short_reason === null)
   )
 }
 
@@ -81,11 +88,20 @@ function isCaseDetail(value: unknown): value is BatchCaseDetail {
     return false
   }
   const expected = value.expected_input
+  const validResult =
+    value.result === null ||
+    (isRecord(value.result) &&
+      isReviewResult(value.result.result) &&
+      (value.result.processing_mode === 'synthetic' || value.result.processing_mode === 'live') &&
+      typeof value.result.correlation_id === 'string' &&
+      typeof value.result.completed_at === 'string' &&
+      typeof value.result.expires_at === 'string')
   return (
     typeof expected.brand_name === 'string' &&
     typeof expected.class_type === 'string' &&
     typeof expected.expected_abv === 'string' &&
-    typeof expected.expected_net_contents === 'string'
+    typeof expected.expected_net_contents === 'string' &&
+    validResult
   )
 }
 
@@ -93,16 +109,18 @@ export class BatchRequestError extends Error {
   readonly issues: PreflightIssue[]
   readonly notFound: boolean
   readonly correlationId: string
+  readonly temporary: boolean
 
   constructor(
     message: string,
-    options: { issues?: PreflightIssue[]; notFound?: boolean; correlationId?: string } = {},
+    options: { issues?: PreflightIssue[]; notFound?: boolean; correlationId?: string; temporary?: boolean } = {},
   ) {
     super(message)
     this.name = 'BatchRequestError'
     this.issues = options.issues ?? []
     this.notFound = options.notFound ?? false
     this.correlationId = options.correlationId ?? ''
+    this.temporary = options.temporary ?? false
   }
 }
 
@@ -117,6 +135,7 @@ async function requestJson(
   } catch {
     throw new BatchRequestError(
       'The batch review service could not be reached. Check your connection and try again.',
+      { temporary: true },
     )
   }
 
@@ -126,6 +145,7 @@ async function requestJson(
   } catch {
     throw new BatchRequestError('The batch review service returned an unreadable response.', {
       correlationId: response.headers.get('X-Correlation-ID') ?? '',
+      temporary: response.status >= 500,
     })
   }
 
@@ -142,9 +162,12 @@ async function requestJson(
         notFound: payload.code === 'batch_not_found',
         correlationId:
           typeof payload.correlation_id === 'string' ? payload.correlation_id : '',
+        temporary: response.status >= 500,
       })
     }
-    throw new BatchRequestError('The batch request returned an unexpected error.')
+    throw new BatchRequestError('The batch request returned an unexpected error.', {
+      temporary: response.status >= 500,
+    })
   }
 
   if (!validate(payload)) {

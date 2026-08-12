@@ -23,8 +23,7 @@ const batchHeader =
   'Application ID,Label Image Filename,Expected Brand,Expected Class/Type,Expected ABV,Expected Net Contents\r\n'
 
 async function openBatchWorkflow(page: Page) {
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Batch preflight' }).click()
+  await page.goto('/batch')
   await expect(page.getByRole('heading', { name: 'Prepare a batch package' })).toBeVisible()
 }
 
@@ -68,9 +67,9 @@ test('provides a visible keyboard focus path into the form', async ({ page }) =>
   await page.keyboard.press('Tab')
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused()
   await page.keyboard.press('Tab')
-  await expect(page.getByRole('button', { name: 'Single label' })).toBeFocused()
+  await expect(page.getByRole('link', { name: 'Single label' })).toBeFocused()
   await page.keyboard.press('Tab')
-  await expect(page.getByRole('button', { name: 'Batch preflight' })).toBeFocused()
+  await expect(page.getByRole('link', { name: 'Batch review' })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(page.getByLabel('Expected brand name')).toBeFocused()
 
@@ -129,7 +128,7 @@ test('corrects a mixed package and explicitly confirms ready-only selection', as
   await expect(page.getByRole('heading', { name: /Batch processing (started|finished)/ })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Batch processing finished' })).toBeVisible()
-  await expect(page.getByRole('status')).toContainText('2 completed')
+  await expect(page.locator('.batch-progress-panel')).toContainText('2 completed')
 })
 
 test('keeps an entirely invalid package as an understandable correction draft', async ({ page }) => {
@@ -142,4 +141,40 @@ test('keeps an entirely invalid package as an understandable correction draft', 
   await expect(page.locator('.count-ready strong')).toHaveText('0')
   await expect(page.locator('.count-correction strong')).toHaveText('1')
   await expect(page.getByRole('button', { name: 'Process all ready cases' })).toBeDisabled()
+})
+
+test('keeps a 25-row result set usable on a narrow screen and by keyboard', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 740 })
+  await openBatchWorkflow(page)
+  const rows = Array.from(
+    { length: 25 },
+    (_, index) => `APP-${index + 1},label-${index + 1}.png,Brand,Bourbon,45,750 mL\r\n`,
+  ).join('')
+  const images = Array.from({ length: 25 }, (_, index) => `label-${index + 1}.png`)
+  await uploadBatch(page, rows, images)
+
+  await expect(page.locator('.count-ready strong')).toHaveText('25')
+  await page.getByRole('button', { name: 'Process all ready cases' }).click()
+  await page.getByRole('button', { name: 'Confirm ready cases' }).click()
+  await expect(page.getByRole('heading', { name: 'Batch processing finished' })).toBeVisible({
+    timeout: 20_000,
+  })
+
+  await expect(page.locator('.batch-results-table tbody tr')).toHaveCount(25)
+  await expect(page.getByRole('link', { name: 'Download results CSV' })).toBeVisible()
+  const tableScrollsWithinItsRegion = await page.locator('.batch-results-table-wrap').evaluate(
+    (element) => element.scrollWidth > element.clientWidth,
+  )
+  expect(tableScrollsWithinItsRegion).toBe(true)
+  const viewportDoesNotOverflow = await page.locator('body').evaluate(
+    (element) => element.scrollWidth <= document.documentElement.clientWidth,
+  )
+  expect(viewportDoesNotOverflow).toBe(true)
+
+  const firstDetail = page.getByRole('button', { name: 'View details' }).first()
+  await firstDetail.focus()
+  await expect(firstDetail).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('heading', { name: 'APP-1', exact: true })).toBeFocused()
+  await expect(page.getByRole('group', { name: 'Review checks' })).toBeVisible()
 })
