@@ -188,12 +188,23 @@ class ObservationRequirements(ManifestModel):
     government_warning: WarningObservationRequirement
 
 
+AllowedCheckStatuses = Annotated[list[CheckStatus], Field(min_length=1)]
+ExpectedCheckStatus = CheckStatus | AllowedCheckStatuses
+
+
 class ExpectedCheckStatuses(ManifestModel):
-    brand_name: CheckStatus
-    class_type: CheckStatus
-    alcohol_content: CheckStatus
-    net_contents: CheckStatus
-    government_warning: CheckStatus
+    brand_name: ExpectedCheckStatus
+    class_type: ExpectedCheckStatus
+    alcohol_content: ExpectedCheckStatus
+    net_contents: ExpectedCheckStatus
+    government_warning: ExpectedCheckStatus
+
+    @field_validator("*")
+    @classmethod
+    def require_unique_allowed_statuses(cls, value: ExpectedCheckStatus) -> ExpectedCheckStatus:
+        if isinstance(value, list) and len(value) != len(set(value)):
+            raise ValueError("allowed check statuses must be unique")
+        return value
 
 
 class ExpectedReviewResult(ManifestModel):
@@ -202,18 +213,21 @@ class ExpectedReviewResult(ManifestModel):
 
     @model_validator(mode="after")
     def require_consistent_outcome(self) -> Self:
-        statuses = list(self.checks.model_dump().values())
+        statuses = [
+            set(value if isinstance(value, list) else [value])
+            for value in self.checks.model_dump(mode="python").values()
+        ]
         if self.outcome == OverallOutcome.ALL_CHECKS_PASSED and any(
-            status != CheckStatus.MATCH for status in statuses
+            status != {CheckStatus.MATCH} for status in statuses
         ):
             raise ValueError("all checks passed requires five matching checks")
         if self.outcome == OverallOutcome.UNABLE_TO_PROCESS and any(
-            status != CheckStatus.NOT_EVALUATED for status in statuses
+            status != {CheckStatus.NOT_EVALUATED} for status in statuses
         ):
             raise ValueError("unable to process requires five unevaluated checks")
         if self.outcome == OverallOutcome.NEEDS_REVIEW and (
-            all(status == CheckStatus.MATCH for status in statuses)
-            or all(status == CheckStatus.NOT_EVALUATED for status in statuses)
+            all(status == {CheckStatus.MATCH} for status in statuses)
+            or all(status == {CheckStatus.NOT_EVALUATED} for status in statuses)
         ):
             raise ValueError("needs review requires at least one evaluated nonmatch")
         return self

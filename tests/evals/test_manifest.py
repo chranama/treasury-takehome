@@ -140,6 +140,17 @@ def test_v2_manifest_rejects_contradictory_overall_outcome() -> None:
         EvaluationManifestV2.model_validate(payload)
 
 
+def test_v2_manifest_rejects_duplicate_allowed_check_statuses() -> None:
+    payload = hosted_manifest_payload()
+    payload["cases"][0]["expected_review"]["checks"]["government_warning"] = [  # type: ignore[index]
+        "match",
+        "match",
+    ]
+
+    with pytest.raises(ValidationError, match="allowed check statuses must be unique"):
+        EvaluationManifestV2.model_validate(payload)
+
+
 def test_v2_manifest_rejects_owner_family_mismatch() -> None:
     payload = hosted_manifest_payload()
     payload["owner"] = "comparison"

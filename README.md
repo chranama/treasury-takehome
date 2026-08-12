@@ -100,6 +100,10 @@ uv run python -m evals.live \
 
 The default run makes four initial model requests over versioned synthetic fixtures, with at most one narrowly bounded retry per fixture. It records the exact configuration, fixture revision, check outcomes, uncertainty behavior, malformed-output rate, latency, provider token usage, and estimated cost. The command refuses to overwrite an existing evidence file. Use `--image-detail original` only as an explicit follow-up if warning transcription at the initial `high` setting fails.
 
+To run the expanded 18-case F2 visual regression instead of the frozen four-case baseline, add
+`--manifest fixtures/hosted-visual-v2.json`. This remains an explicitly paid evaluation; ordinary
+tests cover the same rendering and gate logic with fixed responses and no provider access.
+
 ## Documentation
 
 - [Project background](docs/background.md)

@@ -32,9 +32,17 @@ from app.extraction.pricing import (
     PRICING_CHECKED_AT,
     PRICING_SOURCE,
 )
-from evals.fixtures import EvaluationCase, load_manifest, render_fixture
+from evals.fixtures import EvaluationCase, EvaluationManifest, load_manifest, render_fixture
+from evals.manifest import EvaluationCaseV2, EvaluationManifestV2, load_manifest_v2
+from evals.renderer import render_case
+from evals.visual_evaluation import evaluate_v2_failure, evaluate_v2_success
 
 DEFAULT_MANIFEST = PROJECT_ROOT / "fixtures" / "live-evaluation-v1.json"
+
+
+def _manifest_version(path: Path) -> int:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return payload.get("schema_version", 1)
 
 
 def _run_git(*args: str) -> str:
@@ -220,7 +228,9 @@ async def run_evaluation(
     if output_path.exists():
         raise FileExistsError("Evaluation output already exists; choose a new evidence path.")
 
-    manifest = load_manifest(manifest_path)
+    manifest: EvaluationManifestV2 | EvaluationManifest
+    is_v2 = _manifest_version(manifest_path) == 2
+    manifest = load_manifest_v2(manifest_path) if is_v2 else load_manifest(manifest_path)
     adapter = create_extraction_adapter(settings)
     if not isinstance(adapter, OpenAIExtractionAdapter):
         raise RuntimeError("Live evaluation requires the OpenAI extraction adapter.")
@@ -230,7 +240,10 @@ async def run_evaluation(
         with tempfile.TemporaryDirectory(prefix="treasury-live-eval-") as raw_directory:
             directory = Path(raw_directory)
             for case in manifest.cases:
-                prepared = render_fixture(case, directory / f"{case.id}.png")
+                if isinstance(case, EvaluationCaseV2):
+                    prepared = render_case(case, directory / case.artifacts[0].filename).image
+                else:
+                    prepared = render_fixture(case, directory / f"{case.id}.png")
                 try:
                     extraction = await extract_with_retries(
                         adapter,
@@ -238,9 +251,22 @@ async def run_evaluation(
                         settings.openai_transient_retries,
                     )
                 except ExtractionError as error:
-                    records.append(evaluate_failure(case, error, adapter.service_tier))
+                    if isinstance(case, EvaluationCaseV2):
+                        records.append(
+                            evaluate_v2_failure(
+                                case,
+                                error_kind=error.kind.value,
+                                requested_service_tier=adapter.service_tier,
+                            )
+                        )
+                    else:
+                        records.append(evaluate_failure(case, error, adapter.service_tier))
                 else:
-                    records.append(evaluate_success(case, extraction))
+                    records.append(
+                        evaluate_v2_success(case, extraction)
+                        if isinstance(case, EvaluationCaseV2)
+                        else evaluate_success(case, extraction)
+                    )
     finally:
         await adapter.aclose()
 

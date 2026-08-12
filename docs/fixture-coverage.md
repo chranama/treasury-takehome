@@ -1,6 +1,6 @@
 # Fixture Coverage and Manifest Contract
 
-**Status:** F0 inventory and schema complete; missing fixtures are scheduled for F1-F4
+**Status:** F0-F2 complete; reviewer demo fixtures remain scheduled for F4
 
 **Last updated:** 2026-08-12
 
@@ -14,30 +14,30 @@ merely because the deterministic comparison rule already has a unit test.
 ## Acceptance-scenario inventory
 
 The scenario IDs below are stable planning identifiers. `Existing` means the named committed
-test or `live-evaluation-v1` case covers that layer today. `Missing` is an explicit assignment
-to a later fixture milestone, not an F0 blocker.
+test or fixture revision covers that layer today. `Missing` is an explicit assignment to a later
+fixture milestone, not evidence supplied by a different layer.
 
 | ID | Specification scenario and layer | Coverage | Suite owner | Fixture family | Evaluation layer | Expected result |
 | --- | --- | --- | --- | --- | --- | --- |
-| A1-H | Clear distilled-spirits label with all five checks, hosted extraction | Existing: `clear-matching-label` | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Five `match`; `all_checks_passed`; uncertainty forbidden |
+| A1-H | Clear distilled-spirits label with all five checks, hosted extraction | Existing: `clear-matching-label` and `clear-composite` | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Five `match`; `all_checks_passed`; uncertainty forbidden |
 | A2-D | Case, whitespace, and typographic-apostrophe brand variation, deterministic comparison | Existing: comparison normalization and review tests | `comparison` | `deterministic_domain` | `domain` | Brand `match`; five `match` for a complete case; `all_checks_passed` |
-| A2-H | Brand-format variation as visible artwork | Missing: F2 | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Visible brand preserved; deterministic result `match`; uncertainty forbidden |
+| A2-H | Brand-format variation as visible artwork | Existing: `brand-format-variation` | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Visible brand preserved; deterministic result `match`; uncertainty forbidden |
 | A3-D | Material brand or class/type difference, deterministic comparison | Existing: comparison review tests | `comparison` | `deterministic_domain` | `domain` | Affected check `needs_review`; overall `needs_review` |
-| A3-H | Material brand or class/type difference as visible artwork | Missing: F2 | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Complete differing text preserved; affected check `needs_review`; overall `needs_review` |
+| A3-H | Material brand or class/type difference as visible artwork | Existing: `material-brand-difference` and `material-class-difference` | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Complete differing text preserved; affected check `needs_review`; overall `needs_review` |
 | A4-D | Proof equivalence and conflicting ABV/proof, deterministic comparison | Existing: parsing and review tests | `comparison` | `deterministic_domain` | `domain` | Proof equivalent: alcohol `match`; conflict: alcohol `needs_review` and overall `needs_review` |
-| A4-H | Proof-only and conflicting ABV/proof artwork | Missing: F2 | `hosted_extraction` | `hosted_model_visual` | `live_provider` | All visible alcohol statements preserved; proof equivalent passes; conflict needs review |
+| A4-H | Proof-only and conflicting ABV/proof artwork | Existing: `proof-only` and `conflicting-alcohol` | `hosted_extraction` | `hosted_model_visual` | `live_provider` | All visible alcohol statements preserved; proof equivalent passes; conflict needs review |
 | A5-D | Equivalent and different metric net contents, deterministic comparison | Existing: parsing and review tests | `comparison` | `deterministic_domain` | `domain` | Equivalent quantity `match`; different quantity `mismatch` and overall `needs_review` |
 | A5-H1 | Different net contents as visible artwork | Existing: `mismatched-net-contents` | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Net contents `mismatch`; overall `needs_review`; uncertainty forbidden |
-| A5-H2 | Equivalent `0.75 L` artwork against expected `750 mL` | Missing: F2 | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Visible quantity preserved; net contents `match`; `all_checks_passed` |
+| A5-H2 | Equivalent `0.75 L` artwork against expected `750 mL` | Existing: `equivalent-net-contents` | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Visible quantity preserved; net contents `match`; `all_checks_passed` |
 | A6-D | Missing and altered Government Warning, deterministic comparison | Existing: comparison review tests | `comparison` | `deterministic_domain` | `domain` | Warning `mismatch`; overall `needs_review` |
 | A6-H1 | One altered warning word as visible artwork | Existing: `altered-government-warning` | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Exact altered text preserved; warning `mismatch`; overall `needs_review` |
-| A6-H2 | Missing Government Warning artwork | Missing: F2 | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Absence reported, not uncertainty; warning `mismatch`; overall `needs_review` |
-| A7-H | Low-quality or partially unreadable artwork | Existing baseline: `unreadable-label`; progressive and partial variants missing for F2 | `hosted_extraction` | `hosted_model_visual` | `live_provider` | No fabricated text; affected checks `needs_review`; overall `needs_review`; uncertainty required |
+| A6-H2 | No Government Warning visible in submitted artwork | Existing: `missing-warning` | `hosted_extraction` | `hosted_model_visual` | `live_provider` | No warning text invented; `not_visible` or conservative uncertainty produces review, never a pass |
+| A7-H | Low-quality or partially unreadable artwork | Existing: `small-warning-threshold`, `obscured-warning`, and `degraded-unreadable` | `hosted_extraction` | `hosted_model_visual` | `live_provider` | Readable small text is preserved; obscured or degraded evidence is not fabricated; affected checks need review |
 | A8-I | Unsupported, empty, truncated, and corrupt image intake | Existing: generated image-intake and API tests | `image_intake` | `image_intake_security` | `image_intake` | Safe invalid-input response; no provider attempt; five checks are not evaluated if represented as a review result |
 
-The inventory covers all eight categories in the specification. F2 owns the missing hosted
-visual variants; F1 must first supply the renderer controls they require. F3 owns P1 package
-coverage and F4 owns evaluator-downloadable artifacts.
+The inventory covers all eight categories in the specification. The `hosted-visual-v2` revision
+now supplies the F2 visual variants using the F1 renderer. F3 owns P1 package coverage and F4 owns
+evaluator-downloadable artifacts.
 
 ## Suite ownership
 
@@ -75,7 +75,8 @@ Each case records:
 - renderer-specific `artwork` parameters;
 - expected visible text, separate from expected application values;
 - required observation properties for all four fields and the warning;
-- all five deterministic check statuses and the overall outcome;
+- all five deterministic check statuses and the overall outcome; a check may list multiple safe
+  statuses only when accepted observation states deterministically lead to the same review outcome;
 - `uncertainty` as `required`, `allowed`, or `forbidden`; and
 - artifact basename, media type, and lowercase SHA-256 for every rendered artifact or package.
 
@@ -102,9 +103,9 @@ response.
 `fixtures/live-evaluation-v1.json` remains the immutable input for the accepted August 11, 2026
 Luna evidence. It retains its original schema and SHA-256
 `9521ca3e94a3ce88bd14fc783d7905b7a317454817c593294a622755873a1797`.
-The existing `evals.fixtures.load_manifest` path continues to load it. Expanded fixtures will use
-a new revision and the v2 contract; neither the old file nor its historical interpretation will
-be rewritten.
+The existing `evals.fixtures.load_manifest` path continues to load it. The expanded
+`hosted-visual-v2` revision uses the v2 contract; neither the old file nor its historical
+interpretation was rewritten.
 
 ## F1 renderer decisions
 
@@ -133,8 +134,8 @@ details open; F1 resolves them as follows:
   provisional intake ceiling without changing that product limit.
 - Artifact SHA-256 is calculated over the final metadata-free RGB PNG. Manifest rendering checks
   that hash and deletes a mismatched output so it cannot be mistaken for accepted evidence.
-- Reproducible test artifacts remain temporary. F1 does not commit generated binaries or create
-  the F2 hosted-model suite.
+- Reproducible test artifacts remain temporary. F1 itself did not commit generated binaries; F2
+  later reused the renderer to create its manifest and still renders PNGs only when needed.
 
 On August 12, 2026, the generated clear composite, single panel, typography variant, two-brand
 and two-quantity ambiguity case, independently rotated back panel, combined degradation case,
@@ -143,3 +144,30 @@ distinct. The inspection caught and corrected an initially clipped second quanti
 rotation implementation that also cropped the panel. The final rotation control preserves the
 complete panel boundary; crop remains an independent degradation. These temporary artifacts are
 test evidence for the renderer controls, not provider-quality evidence or committed demo files.
+
+## F2 hosted visual regression
+
+The committed `hosted-visual-v2` manifest defines 18 deterministic cases spanning clear and
+single-panel layouts, brand and class variation, proof and conflicting alcohol statements,
+equivalent and mismatched quantities, warning wording and weight, ambiguity, rotation, small text,
+obstruction, combined degradation, and a near-boundary wide composite. The manifest stores source
+artwork parameters and artifact hashes; generated PNGs remain reproducible and uncommitted.
+
+The live harness renders and hash-checks each artifact before provider access, evaluates visible
+observations independently of deterministic comparison, and records both gates. Ordinary tests
+exercise that complete path with fixed provider responses, including rejection of fabricated
+candidates and required uncertainty for unreadable artwork.
+
+On August 12, 2026, the accepted Standard-tier `gpt-5.6-luna` configuration at `high` detail met
+all 18 observation and correctness gates. The paid pass produced no timeout, retry, malformed
+response, or provider error. Median latency was 2.00 seconds and nearest-rank p95 and maximum were
+2.89 seconds across 18 cases; estimated provider cost was $0.014103 under the existing pricing
+snapshot. These synthetic fixtures support the prototype decision but do not estimate accuracy on
+commercial labels or establish a production latency distribution.
+
+The initial diagnostic exposed two ground-truth defects rather than product failures: an
+ambiguous synthetic brand phrase and an expectation that could not represent both safe outcomes
+for a warning absent from the submitted panels. The brand was made unambiguous, and the manifest
+now permits `mismatch` or conservative `needs_review` for that warning while always requiring the
+overall review outcome. The preserved accepted observations replayed 18/18 after this metadata-only
+correction; no extra provider call was used to manufacture a passing result.

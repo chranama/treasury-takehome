@@ -1,0 +1,3033 @@
+{
+  "schema_version": 2,
+  "revision": "hosted-visual-v2",
+  "owner": "hosted_extraction",
+  "purpose": "Evaluate visible label extraction and conservative uncertainty behavior across the required synthetic P0 visual matrix.",
+  "cases": [
+    {
+      "id": "clear-composite",
+      "purpose": "Establish the clear front/back five-check baseline.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "all_checks_passed",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "clear-composite.png",
+          "media_type": "image/png",
+          "sha256": "250a1769344d64c093a855b73c3b3b9bfce5da6250880a1e4d94cb02b5a36b90"
+        }
+      ]
+    },
+    {
+      "id": "clear-single-panel",
+      "purpose": "Preserve every visible field in a single-panel layout.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "single_panel",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "all_checks_passed",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "clear-single-panel.png",
+          "media_type": "image/png",
+          "sha256": "3794909afa327a5bbce0e965f686bc94db16534df1b8d222b29e795c68cdef2a"
+        }
+      ]
+    },
+    {
+      "id": "brand-format-variation",
+      "purpose": "Preserve a case and typographic-apostrophe brand variation for deterministic normalization.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "Old Tom’s Distillery"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "Old Tom’s Distillery"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM'S DISTILLERY",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "all_checks_passed",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "brand-format-variation.png",
+          "media_type": "image/png",
+          "sha256": "541850d44f9475cdb43411d09fdaf5fadbd4f1576dd0e951c0db52d0f568d263"
+        }
+      ]
+    },
+    {
+      "id": "material-brand-difference",
+      "purpose": "Preserve a materially different visible brand without anchoring to expected data.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD FOX DISTILLERY"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD FOX DISTILLERY"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "needs_review",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "material-brand-difference.png",
+          "media_type": "image/png",
+          "sha256": "36d2e52873ec33267c1a9be927816e91ea91e9cf246ffce5f6c974833ede9f05"
+        }
+      ]
+    },
+    {
+      "id": "material-class-difference",
+      "purpose": "Preserve a materially different visible class or type.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Rye Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Rye Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "needs_review",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "material-class-difference.png",
+          "media_type": "image/png",
+          "sha256": "35b8cd012dcc29297b194fdbc81b1ccb30908f410bcc1c39f9c2ab65b756d2b0"
+        }
+      ]
+    },
+    {
+      "id": "proof-only",
+      "purpose": "Extract proof-only artwork and leave conversion to deterministic comparison.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "90 Proof"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "90 Proof"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "all_checks_passed",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "proof-only.png",
+          "media_type": "image/png",
+          "sha256": "9e61d027dd8e9f7205a1f402764434e6bf17d345dcd61da2202c10de28126a29"
+        }
+      ]
+    },
+    {
+      "id": "conflicting-alcohol",
+      "purpose": "Return both conflicting alcohol statements without silently choosing one.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol.",
+          "80 Proof"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol.",
+          "80 Proof"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "needs_review",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "conflicting-alcohol.png",
+          "media_type": "image/png",
+          "sha256": "b46542c758c7da73b10ecd712c09e1d1b4f7113942f73d6e64d20cd442301873"
+        }
+      ]
+    },
+    {
+      "id": "equivalent-net-contents",
+      "purpose": "Extract 0.75 L for deterministic equivalence with 750 mL.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "0.75 L"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "0.75 L"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "all_checks_passed",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "equivalent-net-contents.png",
+          "media_type": "image/png",
+          "sha256": "0ac9140d1deb96c6167b97597ab35c026d36e2c2b229d9d3c2eb15c0c1ef5aa7"
+        }
+      ]
+    },
+    {
+      "id": "material-net-mismatch",
+      "purpose": "Preserve a material visible quantity difference.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "700 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "700 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "mismatch",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "material-net-mismatch.png",
+          "media_type": "image/png",
+          "sha256": "40f36216f606f46bf84b0d0efcd4413ade163c0e3214bee3fc870f0e16bdb1ae"
+        }
+      ]
+    },
+    {
+      "id": "missing-warning",
+      "purpose": "Distinguish a warning that is not visible in the submitted artwork from unreadable artwork.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": null,
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": null,
+        "warning_heading": null
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "absent",
+          "heading_text": "absent",
+          "heading_weight": [
+            "uncertain"
+          ],
+          "body_weight": [
+            "uncertain"
+          ],
+          "visibility": [
+            "not_visible",
+            "uncertain"
+          ],
+          "readability": [
+            "unreadable",
+            "uncertain"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": [
+            "mismatch",
+            "needs_review"
+          ]
+        }
+      },
+      "uncertainty": "allowed",
+      "artifacts": [
+        {
+          "filename": "missing-warning.png",
+          "media_type": "image/png",
+          "sha256": "f7d20b8e733fda3cbf6c38a0a2a7df21be5c42b14639ca869fb9ec333cb97ac0"
+        }
+      ]
+    },
+    {
+      "id": "altered-warning",
+      "purpose": "Transcribe one altered warning phrase exactly enough for deterministic rejection.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and might cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and might cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "mismatch"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "altered-warning.png",
+          "media_type": "image/png",
+          "sha256": "11675510a78c7338ef5dfc36921c512e331edbf6dd51901b39d05f37d1d33c91"
+        }
+      ]
+    },
+    {
+      "id": "incorrect-warning-weight",
+      "purpose": "Observe a visibly non-bold warning heading rather than inferring compliant styling.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "regular",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "not_bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "mismatch"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "incorrect-warning-weight.png",
+          "media_type": "image/png",
+          "sha256": "308e5fb7f220a354c14c2a1b3888b4374a645b722dd7381b5657b1b6f4be2942"
+        }
+      ]
+    },
+    {
+      "id": "ambiguous-brand-and-quantity",
+      "purpose": "Return all plausible brand and quantity candidates in an intentionally ambiguous label.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM DISTILLERY",
+          "OLD TOM RESERVE"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL",
+          "700 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM DISTILLERY",
+          "OLD TOM RESERVE"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL",
+          "700 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "contains_all",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "contains_all",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "needs_review",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "needs_review",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "ambiguous-brand-and-quantity.png",
+          "media_type": "image/png",
+          "sha256": "fcc86fe6537b267392be6cf114b74ddc8bed46d7581b689b010e964328592421"
+        }
+      ]
+    },
+    {
+      "id": "rotated-back-panel",
+      "purpose": "Extract the complete warning from an independently rotated back panel.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": -7
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "all_checks_passed",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "rotated-back-panel.png",
+          "media_type": "image/png",
+          "sha256": "4eaabc0f8844a82fceab6049fd0f054313cfb56c77f5c5b5f8e3a38b478b2a6c"
+        }
+      ]
+    },
+    {
+      "id": "small-warning-threshold",
+      "purpose": "Transcribe the smallest supported warning typography when it remains readable.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 14,
+          "warning_body_size": 12,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "all_checks_passed",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "small-warning-threshold.png",
+          "media_type": "image/png",
+          "sha256": "cfd3d635990da17730aaa4aee203cb4a001b1115a8a42aaeabdbab702dcccdea"
+        }
+      ]
+    },
+    {
+      "id": "obscured-warning",
+      "purpose": "Report a partially obscured warning conservatively while preserving readable front-panel fields.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": {
+            "left": 0.46,
+            "top": 0.16,
+            "right": 0.96,
+            "bottom": 0.3
+          },
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "any",
+          "heading_text": "any",
+          "heading_weight": [
+            "bold",
+            "uncertain"
+          ],
+          "body_weight": [
+            "not_bold",
+            "uncertain"
+          ],
+          "visibility": [
+            "visible",
+            "uncertain"
+          ],
+          "readability": [
+            "partially_readable",
+            "unreadable",
+            "uncertain"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "needs_review"
+        }
+      },
+      "uncertainty": "required",
+      "artifacts": [
+        {
+          "filename": "obscured-warning.png",
+          "media_type": "image/png",
+          "sha256": "b24ac31d044f81528413342ae3e7a3e0da9e08a87092dd745bb6759f8eef0aeb"
+        }
+      ]
+    },
+    {
+      "id": "degraded-unreadable",
+      "purpose": "Return uncertainty without fabricated candidates under combined degradation.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 1600,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 72,
+          "class_type_size": 36,
+          "detail_size": 32,
+          "warning_heading_size": 26,
+          "warning_body_size": 21,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 0.35,
+          "glare_box": {
+            "left": 0.08,
+            "top": 0.08,
+            "right": 0.94,
+            "bottom": 0.55
+          },
+          "glare_opacity": 0.8,
+          "obstruction_box": {
+            "left": 0.12,
+            "top": 0.62,
+            "right": 0.88,
+            "bottom": 0.82
+          },
+          "blur_radius": 9,
+          "rotation_degrees": 5,
+          "crop": {
+            "left": 0.12,
+            "top": 0.08,
+            "right": 0.12,
+            "bottom": 0.08
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "empty",
+          "visibility": [
+            "uncertain"
+          ],
+          "readability": [
+            "unreadable",
+            "uncertain"
+          ]
+        },
+        "class_type": {
+          "candidates": "empty",
+          "visibility": [
+            "uncertain"
+          ],
+          "readability": [
+            "unreadable",
+            "uncertain"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "empty",
+          "visibility": [
+            "uncertain"
+          ],
+          "readability": [
+            "unreadable",
+            "uncertain"
+          ]
+        },
+        "net_contents": {
+          "candidates": "empty",
+          "visibility": [
+            "uncertain"
+          ],
+          "readability": [
+            "unreadable",
+            "uncertain"
+          ]
+        },
+        "government_warning": {
+          "text": "any",
+          "heading_text": "any",
+          "heading_weight": [
+            "uncertain"
+          ],
+          "body_weight": [
+            "uncertain"
+          ],
+          "visibility": [
+            "uncertain"
+          ],
+          "readability": [
+            "partially_readable",
+            "unreadable",
+            "uncertain"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "needs_review",
+          "class_type": "needs_review",
+          "alcohol_content": "needs_review",
+          "net_contents": "needs_review",
+          "government_warning": "needs_review"
+        }
+      },
+      "uncertainty": "required",
+      "artifacts": [
+        {
+          "filename": "degraded-unreadable.png",
+          "media_type": "image/png",
+          "sha256": "6999d326c773b1d04000a2315cce7cff7e26ea39b649e664180fb35c212ec0d9"
+        }
+      ]
+    },
+    {
+      "id": "near-dimension-bound",
+      "purpose": "Measure a wide composite near the provisional maximum-side boundary.",
+      "families": [
+        "hosted_model_visual"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "manual_visual_inspection",
+        "live_provider"
+      ],
+      "renderer": {
+        "id": "synthetic-label",
+        "version": "2",
+        "font_identity": "pillow-embedded-aileron-regular",
+        "seed": null
+      },
+      "artwork": {
+        "canvas": {
+          "width": 5800,
+          "height": 1200
+        },
+        "layout": {
+          "kind": "front_back_composite",
+          "outer_margin": 64,
+          "panel_gap": 48,
+          "back_panel_rotation_degrees": 0
+        },
+        "typography": {
+          "brand_size": 110,
+          "class_type_size": 64,
+          "detail_size": 60,
+          "warning_heading_size": 44,
+          "warning_body_size": 32,
+          "warning_line_spacing": 6,
+          "brand_weight": "bold",
+          "warning_heading_weight": "bold",
+          "warning_body_weight": "regular"
+        },
+        "brand_names": [
+          "OLD TOM"
+        ],
+        "class_types": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_contents": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "degradation": {
+          "contrast": 1,
+          "glare_box": null,
+          "glare_opacity": 0,
+          "obstruction_box": null,
+          "blur_radius": 0,
+          "rotation_degrees": 0,
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        }
+      },
+      "expected_visible_text": {
+        "brand_name": [
+          "OLD TOM"
+        ],
+        "class_type": [
+          "Kentucky Straight Bourbon Whiskey"
+        ],
+        "alcohol_content": [
+          "45% Alc./Vol. (90 Proof)"
+        ],
+        "net_contents": [
+          "750 mL"
+        ],
+        "government_warning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+        "warning_heading": "GOVERNMENT WARNING"
+      },
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "required_observations": {
+        "brand_name": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "class_type": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "alcohol_content": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "net_contents": {
+          "candidates": "exact",
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        },
+        "government_warning": {
+          "text": "exact",
+          "heading_text": "exact",
+          "heading_weight": [
+            "bold"
+          ],
+          "body_weight": [
+            "not_bold"
+          ],
+          "visibility": [
+            "visible"
+          ],
+          "readability": [
+            "readable"
+          ]
+        }
+      },
+      "expected_review": {
+        "outcome": "all_checks_passed",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "uncertainty": "forbidden",
+      "artifacts": [
+        {
+          "filename": "near-dimension-bound.png",
+          "media_type": "image/png",
+          "sha256": "81354a01eb5b54590eb9f177bf702cd2d7f978dccf3b77d70880b63860d8f41c"
+        }
+      ]
+    }
+  ]
+}
