@@ -399,7 +399,16 @@ def build_manifest() -> EvaluationManifestV2:
 def write_manifest(path: Path, manifest: EvaluationManifestV2 | None = None) -> None:
     selected = manifest or build_manifest()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(selected.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    path.write_text(
+        selected.model_dump_json(
+            indent=2,
+            exclude={
+                "cases": {"__all__": {"batch_package", "expected_preflight", "expected_lifecycle"}}
+            },
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def render_manifest_artifacts(manifest: EvaluationManifestV2, directory: Path) -> None:

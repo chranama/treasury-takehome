@@ -1,5 +1,6 @@
 import csv
 from io import BytesIO, StringIO
+from zipfile import ZipFile
 
 from openpyxl import load_workbook
 
@@ -35,6 +36,10 @@ def test_xlsx_template_is_deterministic_and_round_trips_exact_headers() -> None:
         assert workbook[INSTRUCTIONS_WORKSHEET_NAME]["A2"].value.startswith("Use the Batch sheet")
     finally:
         workbook.close()
+
+    with ZipFile(BytesIO(first)) as archive:
+        core_properties = archive.read("docProps/core.xml")
+    assert b"2000-01-01T00:00:00Z</dcterms:modified>" in core_properties
 
 
 def test_templates_define_the_same_planned_parser_header_contract() -> None:

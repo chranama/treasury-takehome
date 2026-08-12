@@ -5,6 +5,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.batches.contracts import PreflightIssueCode
 from app.comparison import (
     CheckStatus,
     ExpectedReview,
@@ -76,6 +77,35 @@ class TextPolicy(StrEnum):
     EXACT = "exact"
     ABSENT = "absent"
     ANY = "any"
+
+
+class SpreadsheetFormat(StrEnum):
+    CSV = "csv"
+    XLSX = "xlsx"
+
+
+class BatchPackageVariant(StrEnum):
+    VALID = "valid"
+    MISSING_IMAGE = "missing_image"
+    EXTRA_IMAGE = "extra_image"
+    DUPLICATE_APPLICATION_ID = "duplicate_application_id"
+    DUPLICATE_IMAGE_REFERENCE = "duplicate_image_reference"
+    UNICODE_FILENAME = "unicode_filename"
+    AMBIGUOUS_FILENAME = "ambiguous_filename"
+    INVALID_VALUES = "invalid_values"
+    CORRUPT_IMAGE = "corrupt_image"
+    OVER_CASE_LIMIT = "over_case_limit"
+    OVER_IMAGE_LIMIT = "over_image_limit"
+    CORRECTION_REPLACEMENT = "correction_replacement"
+    MIXED_LIFECYCLE = "mixed_lifecycle"
+    FORMULA_EXPORT = "formula_export"
+    CLEANUP_READY_ONLY = "cleanup_ready_only"
+    RESTART_PARTIAL = "restart_partial"
+
+
+class BatchSelection(StrEnum):
+    ALL_CASES = "all_cases"
+    READY_CASES_ONLY = "ready_cases_only"
 
 
 class RendererSpec(ManifestModel):
@@ -188,6 +218,67 @@ class ObservationRequirements(ManifestModel):
     government_warning: WarningObservationRequirement
 
 
+class BatchPackageSpec(ManifestModel):
+    generator: Literal["p1-package"]
+    version: Literal["1"]
+    variant: BatchPackageVariant
+    case_count: Annotated[int, Field(ge=1, le=26)]
+    formats: Annotated[list[SpreadsheetFormat], Field(min_length=1)]
+    row_image_filenames: list[str]
+    upload_image_filenames: list[str]
+
+    @field_validator("formats", "row_image_filenames", "upload_image_filenames")
+    @classmethod
+    def require_unique_values(cls, values: list[object]) -> list[object]:
+        if len(values) != len(set(values)):
+            raise ValueError("batch package values must be unique")
+        return values
+
+    @model_validator(mode="after")
+    def require_case_filename_count(self) -> Self:
+        if len(self.row_image_filenames) != self.case_count:
+            raise ValueError("batch package requires one row image filename per case")
+        return self
+
+
+class BatchPreflightExpectation(ManifestModel):
+    issue_codes: list[PreflightIssueCode]
+    ready_case_count: Annotated[int, Field(ge=0, le=25)]
+    correction_case_count: Annotated[int, Field(ge=0, le=26)]
+    ready_after_correction: Annotated[int | None, Field(ge=0, le=25)] = None
+
+    @field_validator("issue_codes")
+    @classmethod
+    def require_unique_issue_codes(
+        cls, values: list[PreflightIssueCode]
+    ) -> list[PreflightIssueCode]:
+        if len(values) != len(set(values)):
+            raise ValueError("expected preflight issue codes must be unique")
+        return values
+
+
+class BatchLifecycleExpectation(ManifestModel):
+    selection: BatchSelection
+    completed: Annotated[int, Field(ge=0, le=25)] = 0
+    failed: Annotated[int, Field(ge=0, le=25)] = 0
+    interrupted: Annotated[int, Field(ge=0, le=25)] = 0
+    not_selected: Annotated[int, Field(ge=0, le=25)] = 0
+    outcomes: list[OverallOutcome] = Field(default_factory=list)
+    maximum_concurrency: Annotated[int | None, Field(ge=1, le=2)] = None
+    provider_attempts: Annotated[int | None, Field(ge=0, le=25)] = None
+    replay_attempts: Annotated[int | None, Field(ge=0, le=25)] = None
+    processed_images_deleted: bool = False
+    expired_content_deleted: bool = False
+    formula_safe_export: bool = False
+
+    @field_validator("outcomes")
+    @classmethod
+    def require_unique_outcomes(cls, values: list[OverallOutcome]) -> list[OverallOutcome]:
+        if len(values) != len(set(values)):
+            raise ValueError("expected batch outcomes must be unique")
+        return values
+
+
 AllowedCheckStatuses = Annotated[list[CheckStatus], Field(min_length=1)]
 ExpectedCheckStatus = CheckStatus | AllowedCheckStatuses
 
@@ -243,8 +334,11 @@ class EvaluationCaseV2(ManifestModel):
     expected_visible_text: VisibleTextExpectation | None = None
     expected_application: ExpectedReview | None = None
     required_observations: ObservationRequirements | None = None
-    expected_review: ExpectedReviewResult
-    uncertainty: UncertaintyExpectation
+    expected_review: ExpectedReviewResult | None = None
+    uncertainty: UncertaintyExpectation | None = None
+    batch_package: BatchPackageSpec | None = None
+    expected_preflight: BatchPreflightExpectation | None = None
+    expected_lifecycle: BatchLifecycleExpectation | None = None
     artifacts: list[ArtifactExpectation] = Field(default_factory=list)
 
     @field_validator("id")
@@ -282,6 +376,8 @@ class EvaluationCaseV2(ManifestModel):
                 "expected_visible_text": self.expected_visible_text,
                 "expected_application": self.expected_application,
                 "required_observations": self.required_observations,
+                "expected_review": self.expected_review,
+                "uncertainty": self.uncertainty,
                 "artifacts": self.artifacts,
             }
             missing = [name for name, value in required.items() if value is None or value == []]
@@ -289,6 +385,18 @@ class EvaluationCaseV2(ManifestModel):
                 raise ValueError("hosted-model visual cases require " + ", ".join(sorted(missing)))
             if EvaluationLayer.LIVE_PROVIDER not in self.layers:
                 raise ValueError("hosted-model visual cases must include the live-provider layer")
+
+        if FixtureFamily.P1_BATCH_PACKAGE in self.families:
+            required = {
+                "batch_package": self.batch_package,
+                "expected_preflight": self.expected_preflight,
+                "artifacts": self.artifacts,
+            }
+            missing = [name for name, value in required.items() if value is None or value == []]
+            if missing:
+                raise ValueError("P1 batch cases require " + ", ".join(sorted(missing)))
+            if EvaluationLayer.P1_PREFLIGHT_BATCH not in self.layers:
+                raise ValueError("P1 batch cases must include the P1 preflight layer")
 
         if self.renderer is not None and (self.artwork is None or not self.artifacts):
             raise ValueError("rendered cases require artwork parameters and hashed artifacts")

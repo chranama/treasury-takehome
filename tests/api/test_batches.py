@@ -29,6 +29,10 @@ from app.extraction import (
     PreparedImage,
 )
 from app.main import create_app
+from evals.batch_suite import generate_package
+from evals.manifest import load_manifest_v2
+
+P1_FIXTURE_MANIFEST = Path(__file__).resolve().parents[2] / "fixtures" / "p1-packages-v1.json"
 
 
 def make_settings(tmp_path: Path, **overrides: object) -> Settings:
@@ -70,6 +74,15 @@ def package_files(
     ]
     files.extend(("images", (name, content, "image/png")) for name, content in images)
     return files
+
+
+def generated_package_input(case_id: str) -> tuple[list[list[str]], list[tuple[str, bytes]]]:
+    manifest = load_manifest_v2(P1_FIXTURE_MANIFEST)
+    case = next(candidate for candidate in manifest.cases if candidate.id == case_id)
+    package = generate_package(case)
+    return [list(row) for row in package.rows], [
+        (image.filename, image.content) for image in package.images
+    ]
 
 
 def issue_codes(payload: dict) -> set[str]:
@@ -182,14 +195,11 @@ def test_mixed_draft_correction_and_replacement_update_only_the_target_case(
     tmp_path: Path,
 ) -> None:
     settings = make_settings(tmp_path)
-    rows = [
-        ["APP-1", "one.png", "Brand", "Bourbon", "45", "750 mL"],
-        ["APP-2", "missing.png", "Brand", "Bourbon", "101", "750 mL"],
-    ]
+    rows, images = generated_package_input("correction-replacement")
     with TestClient(create_app(settings)) as client:
         created = client.post(
             "/api/batches/preflight",
-            files=package_files(rows, [("one.png", png_bytes("red"))]),
+            files=package_files(rows, images),
         ).json()
         batch_id = created["batch_id"]
         ready_case, correction_case = created["cases"]
@@ -410,18 +420,7 @@ def test_correction_and_start_json_requests_have_route_specific_body_bounds(
 def test_twenty_five_case_fake_batch_keeps_concurrency_two_and_isolates_outcomes(
     tmp_path: Path,
 ) -> None:
-    rows = [
-        [
-            f"APP-{index:02d}",
-            f"label-{index:02d}.png",
-            "Treasury Reserve",
-            "Kentucky Straight Bourbon Whiskey",
-            "45",
-            "750 mL",
-        ]
-        for index in range(1, 26)
-    ]
-    images = [(f"label-{index:02d}.png", png_bytes()) for index in range(1, 26)]
+    rows, images = generated_package_input("mixed-lifecycle-25")
     adapter = TrackingAdapter(
         fail_calls={5, 18},
         delay=0.002,
@@ -495,17 +494,11 @@ def test_expiry_removes_unselected_image_and_every_content_bearing_batch_row(
     tmp_path: Path,
 ) -> None:
     settings = make_settings(tmp_path)
-    rows = [
-        ["APP-1", "one.png", "Brand", "Bourbon", "45", "750 mL"],
-        ["APP-2", "two.png", "Brand", "Bourbon", "101", "750 mL"],
-    ]
+    rows, images = generated_package_input("cleanup-ready-only")
     with TestClient(create_app(settings)) as client:
         created = client.post(
             "/api/batches/preflight",
-            files=package_files(
-                rows,
-                [("one.png", png_bytes("red")), ("two.png", png_bytes("blue"))],
-            ),
+            files=package_files(rows, images),
         ).json()
         client.post(
             f"/api/batches/{created['batch_id']}/start",
@@ -928,11 +921,7 @@ def test_mid_batch_restart_preserves_completed_case_and_never_replays_uncertain_
         live_source_window_seconds=60,
         live_source_max_submissions=10,
     )
-    rows = [
-        [f"APP-{index}", f"label-{index}.png", "Brand", "Bourbon", "45", "750 mL"]
-        for index in range(1, 4)
-    ]
-    images = [(f"label-{index}.png", png_bytes()) for index in range(1, 4)]
+    rows, images = generated_package_input("restart-partial")
     first_adapter = TrackingAdapter(delay=1, call_delays={1: 0})
     application = create_app(settings, extraction_adapter=first_adapter)
     application.state.batch_processing_service.drain_seconds = 0.01

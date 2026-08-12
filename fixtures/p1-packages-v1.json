@@ -1,0 +1,1456 @@
+{
+  "schema_version": 2,
+  "revision": "p1-packages-v1",
+  "owner": "batch_workflow",
+  "purpose": "Generate deterministic P1 packages and map every offline batch acceptance path to expected preflight and lifecycle evidence.",
+  "cases": [
+    {
+      "id": "valid-2",
+      "purpose": "Round-trip a two-case package in CSV and XLSX.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "valid",
+        "case_count": 2,
+        "formats": [
+          "csv",
+          "xlsx"
+        ],
+        "row_image_filenames": [
+          "label-01.png",
+          "label-02.png"
+        ],
+        "upload_image_filenames": [
+          "label-01.png",
+          "label-02.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [],
+        "ready_case_count": 2,
+        "correction_case_count": 0
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "7776368c1ab4c25e25836d9be7a35428dcf7b31a550564c7e9f259a9ece84b2a"
+        },
+        {
+          "filename": "applications.xlsx",
+          "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "sha256": "d791a9e2780b4ab0d3a809267bb9f96e29814c9bfdf9216b76f70d225c861b72"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-02.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        }
+      ]
+    },
+    {
+      "id": "valid-5",
+      "purpose": "Round-trip a five-case package in CSV and XLSX.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "valid",
+        "case_count": 5,
+        "formats": [
+          "csv",
+          "xlsx"
+        ],
+        "row_image_filenames": [
+          "label-01.png",
+          "label-02.png",
+          "label-03.png",
+          "label-04.png",
+          "label-05.png"
+        ],
+        "upload_image_filenames": [
+          "label-01.png",
+          "label-02.png",
+          "label-03.png",
+          "label-04.png",
+          "label-05.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [],
+        "ready_case_count": 5,
+        "correction_case_count": 0
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "55f7e531622737267327e3936b51d8d62ce7f151020ee7924dc17aa0bdc7fb09"
+        },
+        {
+          "filename": "applications.xlsx",
+          "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "sha256": "ae7c1b71ce390b48326e3dd1ffe3a95619c6090bb1bded0b95d15bd6569785b5"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-02.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-03.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-04.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-05.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        }
+      ]
+    },
+    {
+      "id": "valid-25",
+      "purpose": "Exercise the maximum accepted package in CSV and XLSX.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "valid",
+        "case_count": 25,
+        "formats": [
+          "csv",
+          "xlsx"
+        ],
+        "row_image_filenames": [
+          "label-01.png",
+          "label-02.png",
+          "label-03.png",
+          "label-04.png",
+          "label-05.png",
+          "label-06.png",
+          "label-07.png",
+          "label-08.png",
+          "label-09.png",
+          "label-10.png",
+          "label-11.png",
+          "label-12.png",
+          "label-13.png",
+          "label-14.png",
+          "label-15.png",
+          "label-16.png",
+          "label-17.png",
+          "label-18.png",
+          "label-19.png",
+          "label-20.png",
+          "label-21.png",
+          "label-22.png",
+          "label-23.png",
+          "label-24.png",
+          "label-25.png"
+        ],
+        "upload_image_filenames": [
+          "label-01.png",
+          "label-02.png",
+          "label-03.png",
+          "label-04.png",
+          "label-05.png",
+          "label-06.png",
+          "label-07.png",
+          "label-08.png",
+          "label-09.png",
+          "label-10.png",
+          "label-11.png",
+          "label-12.png",
+          "label-13.png",
+          "label-14.png",
+          "label-15.png",
+          "label-16.png",
+          "label-17.png",
+          "label-18.png",
+          "label-19.png",
+          "label-20.png",
+          "label-21.png",
+          "label-22.png",
+          "label-23.png",
+          "label-24.png",
+          "label-25.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [],
+        "ready_case_count": 25,
+        "correction_case_count": 0
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "117e6f02129e6ab71a2860dc030af4895df03b97b8d6457b92050e8f303838cc"
+        },
+        {
+          "filename": "applications.xlsx",
+          "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "sha256": "bae48f9095510568aa5e9cc4c50afc28506f3a21e8b7449eb6b31a201ed75805"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-02.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-03.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-04.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-05.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-06.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-07.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-08.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-09.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-10.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-11.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-12.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-13.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-14.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-15.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-16.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-17.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-18.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-19.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-20.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-21.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-22.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-23.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-24.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-25.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        }
+      ]
+    },
+    {
+      "id": "missing-image",
+      "purpose": "Report a referenced image that was not selected.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "missing_image",
+        "case_count": 1,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label.png"
+        ],
+        "upload_image_filenames": []
+      },
+      "expected_preflight": {
+        "issue_codes": [
+          "missing_image"
+        ],
+        "ready_case_count": 0,
+        "correction_case_count": 1
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "00718942c1e6bc053e7f04f3ae10bca6bfb51af4df61eaf6c38e939c9a091c55"
+        }
+      ]
+    },
+    {
+      "id": "extra-unreferenced-image",
+      "purpose": "Warn about a selected image that no row references.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "extra_image",
+        "case_count": 1,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label.png"
+        ],
+        "upload_image_filenames": [
+          "label.png",
+          "unused.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [
+          "unreferenced_image"
+        ],
+        "ready_case_count": 1,
+        "correction_case_count": 0
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "00718942c1e6bc053e7f04f3ae10bca6bfb51af4df61eaf6c38e939c9a091c55"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-02.png",
+          "media_type": "image/png",
+          "sha256": "3e7e3e261fd6ae1343bbc1adbdb77bfa695edd701cfd7731a0b30c3f5f1e1d5b"
+        }
+      ]
+    },
+    {
+      "id": "duplicate-application-id",
+      "purpose": "Reject duplicate normalized application identifiers.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "duplicate_application_id",
+        "case_count": 2,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label.png",
+          "two.png"
+        ],
+        "upload_image_filenames": [
+          "label.png",
+          "two.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [
+          "duplicate_application_id"
+        ],
+        "ready_case_count": 0,
+        "correction_case_count": 2
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "1f1b8255db5c80afff4bfb79d7c4d1c2cbaf90504234355f7280cbef59ff8e48"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-02.png",
+          "media_type": "image/png",
+          "sha256": "91a7e5a8353ad0e258930f8cd716da61452e86cc349b64990c01dfeded686a02"
+        }
+      ]
+    },
+    {
+      "id": "duplicate-image-reference",
+      "purpose": "Reject two rows that normalize to one image reference.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "duplicate_image_reference",
+        "case_count": 2,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label.png",
+          "LABEL.PNG"
+        ],
+        "upload_image_filenames": [
+          "label.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [
+          "duplicate_image_filename"
+        ],
+        "ready_case_count": 0,
+        "correction_case_count": 2
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "189471eeb5d227fb2888e009aab76103e114ef47f06ac00f52e3ce5fdf9205f3"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        }
+      ]
+    },
+    {
+      "id": "unicode-filename-match",
+      "purpose": "Match Unicode-normalized and case-insensitive filenames.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "unicode_filename",
+        "case_count": 1,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "café.png"
+        ],
+        "upload_image_filenames": [
+          " CAFÉ.PNG "
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [],
+        "ready_case_count": 1,
+        "correction_case_count": 0
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "b44418b9a035ea35e41c9365235d37be0e1c88bcf5f789f5770b1f807ae1645e"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        }
+      ]
+    },
+    {
+      "id": "ambiguous-filename-collision",
+      "purpose": "Reject multiple uploads with one normalized filename.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "ambiguous_filename",
+        "case_count": 1,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label.png"
+        ],
+        "upload_image_filenames": [
+          "Label.PNG",
+          "label.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [
+          "ambiguous_image_filename"
+        ],
+        "ready_case_count": 0,
+        "correction_case_count": 1
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "00718942c1e6bc053e7f04f3ae10bca6bfb51af4df61eaf6c38e939c9a091c55"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-02.png",
+          "media_type": "image/png",
+          "sha256": "91a7e5a8353ad0e258930f8cd716da61452e86cc349b64990c01dfeded686a02"
+        }
+      ]
+    },
+    {
+      "id": "invalid-values",
+      "purpose": "Report invalid ABV and net-contents cells together.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "invalid_values",
+        "case_count": 1,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label.png"
+        ],
+        "upload_image_filenames": [
+          "label.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [
+          "invalid_abv",
+          "invalid_net_contents"
+        ],
+        "ready_case_count": 0,
+        "correction_case_count": 1
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "17e63d2d2dfb57c88b8909fb83fdec60026e0361a084e9ce9f81dfa449011318"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        }
+      ]
+    },
+    {
+      "id": "corrupt-image",
+      "purpose": "Reject corrupt image bytes before extraction.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "corrupt_image",
+        "case_count": 1,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label.png"
+        ],
+        "upload_image_filenames": [
+          "label.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [
+          "unsupported_image"
+        ],
+        "ready_case_count": 0,
+        "correction_case_count": 1
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "00718942c1e6bc053e7f04f3ae10bca6bfb51af4df61eaf6c38e939c9a091c55"
+        },
+        {
+          "filename": "image-01.bin",
+          "media_type": "application/octet-stream",
+          "sha256": "5464533c9647b67eb320c40ccc5959537c09102ae75388f6a7675b433e745c9d"
+        }
+      ]
+    },
+    {
+      "id": "over-case-limit",
+      "purpose": "Reject more than 25 nonblank application rows.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "over_case_limit",
+        "case_count": 26,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label-01.png",
+          "label-02.png",
+          "label-03.png",
+          "label-04.png",
+          "label-05.png",
+          "label-06.png",
+          "label-07.png",
+          "label-08.png",
+          "label-09.png",
+          "label-10.png",
+          "label-11.png",
+          "label-12.png",
+          "label-13.png",
+          "label-14.png",
+          "label-15.png",
+          "label-16.png",
+          "label-17.png",
+          "label-18.png",
+          "label-19.png",
+          "label-20.png",
+          "label-21.png",
+          "label-22.png",
+          "label-23.png",
+          "label-24.png",
+          "label-25.png",
+          "label-26.png"
+        ],
+        "upload_image_filenames": []
+      },
+      "expected_preflight": {
+        "issue_codes": [
+          "too_many_cases"
+        ],
+        "ready_case_count": 0,
+        "correction_case_count": 25
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "c2c4519ef3a9e82adde7130dfa99152b35afab38134b6993b16716242c2b33ca"
+        }
+      ]
+    },
+    {
+      "id": "over-image-limit",
+      "purpose": "Reject more than 25 selected images.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "over_image_limit",
+        "case_count": 1,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label.png"
+        ],
+        "upload_image_filenames": [
+          "image-01.png",
+          "image-02.png",
+          "image-03.png",
+          "image-04.png",
+          "image-05.png",
+          "image-06.png",
+          "image-07.png",
+          "image-08.png",
+          "image-09.png",
+          "image-10.png",
+          "image-11.png",
+          "image-12.png",
+          "image-13.png",
+          "image-14.png",
+          "image-15.png",
+          "image-16.png",
+          "image-17.png",
+          "image-18.png",
+          "image-19.png",
+          "image-20.png",
+          "image-21.png",
+          "image-22.png",
+          "image-23.png",
+          "image-24.png",
+          "image-25.png",
+          "image-26.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [
+          "too_many_images"
+        ],
+        "ready_case_count": 0,
+        "correction_case_count": 0
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "00718942c1e6bc053e7f04f3ae10bca6bfb51af4df61eaf6c38e939c9a091c55"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-02.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-03.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-04.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-05.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-06.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-07.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-08.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-09.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-10.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-11.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-12.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-13.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-14.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-15.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-16.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-17.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-18.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-19.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-20.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-21.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-22.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-23.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-24.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-25.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-26.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        }
+      ]
+    },
+    {
+      "id": "correction-replacement",
+      "purpose": "Correct an invalid value and replace a missing image without rebuilding the batch.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch",
+        "fake_adapter_api"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "correction_replacement",
+        "case_count": 2,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "one.png",
+          "missing.png"
+        ],
+        "upload_image_filenames": [
+          "one.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [
+          "missing_image",
+          "invalid_abv"
+        ],
+        "ready_case_count": 1,
+        "correction_case_count": 1,
+        "ready_after_correction": 2
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "f3074249c888c5cdee882dc12f18ab35b5ec3daa71a80676db2c8b70c3fb53bb"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "60b63d84545b09cea106eb3a938e49d7f1045e5fd89bad1fe460355239c7ef56"
+        }
+      ]
+    },
+    {
+      "id": "mixed-lifecycle-25",
+      "purpose": "Complete a 25-case fixed-response batch with independent mismatches, unreadable evidence, and failures.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch",
+        "fake_adapter_api"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "mixed_lifecycle",
+        "case_count": 25,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label-01.png",
+          "label-02.png",
+          "label-03.png",
+          "label-04.png",
+          "label-05.png",
+          "label-06.png",
+          "label-07.png",
+          "label-08.png",
+          "label-09.png",
+          "label-10.png",
+          "label-11.png",
+          "label-12.png",
+          "label-13.png",
+          "label-14.png",
+          "label-15.png",
+          "label-16.png",
+          "label-17.png",
+          "label-18.png",
+          "label-19.png",
+          "label-20.png",
+          "label-21.png",
+          "label-22.png",
+          "label-23.png",
+          "label-24.png",
+          "label-25.png"
+        ],
+        "upload_image_filenames": [
+          "label-01.png",
+          "label-02.png",
+          "label-03.png",
+          "label-04.png",
+          "label-05.png",
+          "label-06.png",
+          "label-07.png",
+          "label-08.png",
+          "label-09.png",
+          "label-10.png",
+          "label-11.png",
+          "label-12.png",
+          "label-13.png",
+          "label-14.png",
+          "label-15.png",
+          "label-16.png",
+          "label-17.png",
+          "label-18.png",
+          "label-19.png",
+          "label-20.png",
+          "label-21.png",
+          "label-22.png",
+          "label-23.png",
+          "label-24.png",
+          "label-25.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [],
+        "ready_case_count": 25,
+        "correction_case_count": 0
+      },
+      "expected_lifecycle": {
+        "selection": "all_cases",
+        "completed": 23,
+        "failed": 2,
+        "interrupted": 0,
+        "not_selected": 0,
+        "outcomes": [
+          "all_checks_passed",
+          "needs_review"
+        ],
+        "maximum_concurrency": 2,
+        "provider_attempts": 25,
+        "processed_images_deleted": true,
+        "expired_content_deleted": false,
+        "formula_safe_export": false
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "117e6f02129e6ab71a2860dc030af4895df03b97b8d6457b92050e8f303838cc"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-02.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-03.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-04.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-05.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-06.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-07.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-08.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-09.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-10.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-11.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-12.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-13.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-14.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-15.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-16.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-17.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-18.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-19.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-20.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-21.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-22.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-23.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-24.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-25.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        }
+      ]
+    },
+    {
+      "id": "formula-safe-export",
+      "purpose": "Neutralize formula-prefix values in terminal CSV output.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch",
+        "fake_adapter_api"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "formula_export",
+        "case_count": 1,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label.png"
+        ],
+        "upload_image_filenames": [
+          "label.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [],
+        "ready_case_count": 1,
+        "correction_case_count": 0
+      },
+      "expected_lifecycle": {
+        "selection": "all_cases",
+        "completed": 1,
+        "failed": 0,
+        "interrupted": 0,
+        "not_selected": 0,
+        "outcomes": [],
+        "processed_images_deleted": true,
+        "expired_content_deleted": false,
+        "formula_safe_export": true
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "3e914b98ece5fdb1823026b4a5c6b1abe7683cb228d88e41a2989cf41ecdb57d"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        }
+      ]
+    },
+    {
+      "id": "cleanup-ready-only",
+      "purpose": "Delete processed images immediately and unselected content at expiry.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch",
+        "fake_adapter_api"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "cleanup_ready_only",
+        "case_count": 2,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "one.png",
+          "two.png"
+        ],
+        "upload_image_filenames": [
+          "one.png",
+          "two.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [
+          "invalid_abv"
+        ],
+        "ready_case_count": 1,
+        "correction_case_count": 1
+      },
+      "expected_lifecycle": {
+        "selection": "ready_cases_only",
+        "completed": 1,
+        "failed": 0,
+        "interrupted": 0,
+        "not_selected": 1,
+        "outcomes": [],
+        "provider_attempts": 1,
+        "processed_images_deleted": true,
+        "expired_content_deleted": true,
+        "formula_safe_export": false
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "9d2f1dddcf43c77dc857c521dc9d8260ebf4b93c8a2b083e17b822f919ea0503"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "60b63d84545b09cea106eb3a938e49d7f1045e5fd89bad1fe460355239c7ef56"
+        },
+        {
+          "filename": "image-02.png",
+          "media_type": "image/png",
+          "sha256": "91a7e5a8353ad0e258930f8cd716da61452e86cc349b64990c01dfeded686a02"
+        }
+      ]
+    },
+    {
+      "id": "restart-partial",
+      "purpose": "Preserve one completed case and interrupt uncertain work without replay after restart.",
+      "families": [
+        "p1_batch_package"
+      ],
+      "layers": [
+        "manifest_schema",
+        "p1_preflight_batch",
+        "fake_adapter_api"
+      ],
+      "batch_package": {
+        "generator": "p1-package",
+        "version": "1",
+        "variant": "restart_partial",
+        "case_count": 3,
+        "formats": [
+          "csv"
+        ],
+        "row_image_filenames": [
+          "label-01.png",
+          "label-02.png",
+          "label-03.png"
+        ],
+        "upload_image_filenames": [
+          "label-01.png",
+          "label-02.png",
+          "label-03.png"
+        ]
+      },
+      "expected_preflight": {
+        "issue_codes": [],
+        "ready_case_count": 3,
+        "correction_case_count": 0
+      },
+      "expected_lifecycle": {
+        "selection": "all_cases",
+        "completed": 1,
+        "failed": 0,
+        "interrupted": 2,
+        "not_selected": 0,
+        "outcomes": [],
+        "provider_attempts": 3,
+        "replay_attempts": 0,
+        "processed_images_deleted": true,
+        "expired_content_deleted": false,
+        "formula_safe_export": false
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "8520c6f610bf51bd1efd844bb6c5ab9a4dfebb071f2316aee2ae556e66b0a443"
+        },
+        {
+          "filename": "image-01.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-02.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        },
+        {
+          "filename": "image-03.png",
+          "media_type": "image/png",
+          "sha256": "35ddaf96fa47ff776b12ffa2eb04bfd38a69d76fb33a73eaab638d216d134b0b"
+        }
+      ]
+    }
+  ]
+}

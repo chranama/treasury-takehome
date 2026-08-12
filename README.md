@@ -88,6 +88,17 @@ npm --prefix frontend run test:e2e
 
 Ordinary automated tests do not require an OpenAI key and must not make provider calls.
 
+The versioned P1 package suite can also be materialized locally for inspection without making a
+provider request:
+
+```bash
+uv run python -m evals.batch_suite \
+  --materialize-dir .data/fixture-inspection/p1
+```
+
+This writes the reproducible CSV, XLSX, and image inputs described by
+`fixtures/p1-packages-v1.json`. Generated binaries remain outside Git.
+
 ## Explicit P0 live evaluation
 
 The P0 live evaluation is a separate, deliberately billable command. Configure `.env` with an OpenAI API key, then acknowledge the paid run and choose an evidence-file destination:

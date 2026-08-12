@@ -168,6 +168,12 @@ The accepted `live-evaluation-v1` manifest remains frozen for historical attribu
 
 Raw evaluation evidence remains local and gitignored because it contains diagnostic observations and provider request identifiers. Hosted extraction remains disabled by default and cannot become ready until the API key and all private usage-control settings are present.
 
+P1 package regression is entirely offline. The `p1-packages-v1` revision generates 18 CSV/XLSX,
+preflight, correction, processing, export, cleanup, and restart cases with 121 artifact hashes.
+Reproducible binaries remain uncommitted. The 25-case fixed-response case verifies independent
+match, mismatch, unreadable, and failure outcomes under concurrency two; restart evidence verifies
+that uncertain work is interrupted without replay.
+
 When live extraction is disabled, P1 preflight drafts and existing results remain available, but
 starting a batch is rejected before it can be queued. This supports a maintenance window without
 turning every case into a failed provider attempt.

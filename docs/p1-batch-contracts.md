@@ -318,9 +318,12 @@ P1.7 makes the following concrete reliability choices:
 - The shared durable usage gate distinguishes normal context completion from cancellation. An
   unsettled reservation on a normal exit remains an `internal_failure`; any non-normal exit or
   cancellation race settles conservatively as `interrupted` before restart reconciliation.
-- The P1 package fixture matrix is generated during tests instead of committing reproducible binary
-  packages. Paired CSV/XLSX packages cover 2, 5, and 25 valid cases; generated preflight cases cover
-  missing, extra, duplicate, Unicode, ambiguous, invalid, corrupt, and over-limit inputs.
+- The versioned `p1-packages-v1` fixture matrix is generated during tests instead of committing
+  reproducible binary packages. Its 18 cases and 121 artifact hashes cover paired CSV/XLSX packages
+  at 2, 5, and 25 valid cases; missing, extra, duplicate, Unicode, ambiguous, invalid, corrupt, and
+  over-limit preflight inputs; and correction, mixed processing, export, cleanup, and restart paths.
+  The actual correction, 25-case lifecycle, cleanup, and restart API regressions consume their named
+  suite cases rather than maintaining separate package inputs.
 - Integrated logging tests use sentinel workbook, filename, expected, extracted, and source-address
   values and assert that none enter application logs or either operational usage table.
 

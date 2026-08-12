@@ -1,6 +1,7 @@
 """Deterministic blank batch-template generation."""
 
 import csv
+import re
 from datetime import datetime
 from io import BytesIO, StringIO
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
@@ -31,6 +32,10 @@ _INSTRUCTIONS = (
 )
 _FIXED_TIMESTAMP = datetime(2000, 1, 1, 0, 0, 0)
 _ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+_CORE_MODIFIED_PATTERN = re.compile(rb"<dcterms:modified[^>]*>.*?</dcterms:modified>")
+_FIXED_CORE_MODIFIED = (
+    b'<dcterms:modified xsi:type="dcterms:W3CDTF">2000-01-01T00:00:00Z</dcterms:modified>'
+)
 
 
 def generate_csv_template() -> bytes:
@@ -68,11 +73,11 @@ def generate_xlsx_template() -> bytes:
     raw = BytesIO()
     workbook.save(raw)
     workbook.close()
-    return _normalize_xlsx_archive(raw.getvalue())
+    return normalize_xlsx_archive(raw.getvalue())
 
 
-def _normalize_xlsx_archive(raw: bytes) -> bytes:
-    """Remove ZIP timestamps so equal templates have equal bytes."""
+def normalize_xlsx_archive(raw: bytes) -> bytes:
+    """Remove ZIP and core-property timestamps so equal workbooks have equal bytes."""
 
     normalized = BytesIO()
     with (
@@ -90,5 +95,8 @@ def _normalize_xlsx_archive(raw: bytes) -> bytes:
             target_info.compress_type = ZIP_DEFLATED
             target_info.external_attr = source_info.external_attr
             target_info.create_system = 0
-            destination.writestr(target_info, source.read(name))
+            content = source.read(name)
+            if name == "docProps/core.xml":
+                content = _CORE_MODIFIED_PATTERN.sub(_FIXED_CORE_MODIFIED, content)
+            destination.writestr(target_info, content)
     return normalized.getvalue()

@@ -133,22 +133,23 @@ def evaluate_v2_success(
     extraction: OpenAIExtractionResult,
 ) -> dict[str, object]:
     expected_application = case.expected_application
-    if expected_application is None:
-        raise ValueError("v2 live evaluation requires expected application values")
+    expected_review = case.expected_review
+    if expected_application is None or expected_review is None:
+        raise ValueError("v2 live evaluation requires application and review ground truth")
     review = compare_review(
         expected_application,
         extraction.observations,
         processing_duration_ms=extraction.latency_ms,
     )
     actual_checks = {check.name.value: check.status for check in review.checks}
-    expected_checks = case.expected_review.checks.model_dump(mode="python")
+    expected_checks = expected_review.checks.model_dump(mode="python")
     check_gate = {
         name: _check_status_gate(expected, actual_checks[name])
         for name, expected in expected_checks.items()
     }
     observations = observation_gate(case, extraction.observations)
     uncertainty_passed = uncertainty_gate(case, extraction.observations)
-    review_passed = review.outcome == case.expected_review.outcome and all(check_gate.values())
+    review_passed = review.outcome == expected_review.outcome and all(check_gate.values())
     usage = extraction.usage
     billed_service_tier = extraction.response_service_tier or extraction.requested_service_tier
     cost = estimated_cost_usd(extraction.model, usage, billed_service_tier)
@@ -162,7 +163,7 @@ def evaluate_v2_success(
             **check_gate,
         },
         "uncertainty_passed": uncertainty_passed,
-        "expected_outcome": case.expected_review.outcome.value,
+        "expected_outcome": expected_review.outcome.value,
         "actual_outcome": review.outcome.value,
         "check_statuses": {check.name.value: check.status.value for check in review.checks},
         "observations": extraction.observations.model_dump(mode="json"),
@@ -193,6 +194,9 @@ def evaluate_v2_failure(
     error_kind: str,
     requested_service_tier: str | None,
 ) -> dict[str, object]:
+    expected_review = case.expected_review
+    if expected_review is None:
+        raise ValueError("v2 live evaluation requires review ground truth")
     return {
         "id": case.id,
         "artifact_sha256": case.artifacts[0].sha256,
@@ -200,7 +204,7 @@ def evaluate_v2_failure(
         "observation_gate": {},
         "review_gate": {},
         "uncertainty_passed": False,
-        "expected_outcome": case.expected_review.outcome.value,
+        "expected_outcome": expected_review.outcome.value,
         "actual_outcome": None,
         "check_statuses": {},
         "observations": None,

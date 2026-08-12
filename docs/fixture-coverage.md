@@ -1,6 +1,6 @@
 # Fixture Coverage and Manifest Contract
 
-**Status:** F0-F2 complete; reviewer demo fixtures remain scheduled for F4
+**Status:** F0-F3 complete; reviewer demo fixtures remain scheduled for F4
 
 **Last updated:** 2026-08-12
 
@@ -67,24 +67,26 @@ The shared top-level fields are:
 - `purpose`: a human-readable statement of what the suite establishes; and
 - `cases`: one or more uniquely identified cases owned by the suite.
 
-Each case records:
+Each case records the following common fields:
 
 - stable `id` and human-readable `purpose`;
 - applicable `families` and `layers`;
-- renderer identity, version, and optional deterministic seed;
-- renderer-specific `artwork` parameters;
-- expected visible text, separate from expected application values;
-- required observation properties for all four fields and the warning;
-- all five deterministic check statuses and the overall outcome; a check may list multiple safe
-  statuses only when accepted observation states deterministically lead to the same review outcome;
-- `uncertainty` as `required`, `allowed`, or `forbidden`; and
+- layer-specific source parameters and expected results; and
 - artifact basename, media type, and lowercase SHA-256 for every rendered artifact or package.
 
 Hosted-model visual cases must include the live-provider layer and all renderer, visible-text,
-expected-application, observation, review, and hash metadata. Rendered cases cannot omit their
-artwork parameters or artifact hashes. Extra fields, duplicate case IDs, duplicate membership
-values, owner/family mismatches, incomplete five-check expectations, and contradictory overall
-outcomes are invalid.
+expected-application, observation, review, uncertainty, and hash metadata. A visual check may list
+multiple safe statuses only when accepted observation states deterministically lead to the same
+review outcome.
+
+P1 package cases must include the preflight layer, generator revision and variant, requested
+spreadsheet formats, row and upload filenames, expected issue codes and counts, and hashes for every
+generated spreadsheet and image. Lifecycle cases additionally record selection, terminal counts,
+outcomes, concurrency, attempts, cleanup, replay, or export properties relevant to that case.
+
+Rendered cases cannot omit their artwork parameters or artifact hashes. Extra fields, duplicate
+case IDs, duplicate membership values, owner/family mismatches, incomplete layer-specific
+expectations, contradictory overall outcomes, and duplicate expected values are invalid.
 
 Candidate policies have deliberately narrow meanings:
 
@@ -171,3 +173,24 @@ for a warning absent from the submitted panels. The brand was made unambiguous, 
 now permits `mismatch` or conservative `needs_review` for that warning while always requiring the
 overall review outcome. The preserved accepted observations replayed 18/18 after this metadata-only
 correction; no extra provider call was used to manufacture a passing result.
+
+## F3 P1 package regression
+
+The committed `p1-packages-v1` manifest defines 18 deterministic package and lifecycle cases. It
+generates paired CSV/XLSX packages at two, five, and 25 cases plus missing, extra, duplicate,
+Unicode, ambiguous, invalid-value, corrupt-image, and over-limit inputs. Named lifecycle cases own
+correction and replacement, a mixed 25-case run, formula-safe export, ready-only expiry cleanup,
+and partial-restart recovery.
+
+The suite records 121 spreadsheet and image hashes without committing the reproducible binaries.
+`evals.batch_suite` can materialize them for inspection, while ordinary tests generate them in
+temporary directories. CSV and XLSX forms parse to identical normalized rows, every preflight case
+meets its expected issue and readiness counts, and separately generated XLSX files remain
+byte-identical across process timestamps.
+
+The real API regressions consume the named correction, mixed-lifecycle, cleanup, and restart cases.
+The mixed fixed-response package completes 23 cases and isolates two failures under observed
+concurrency two; cleanup deletes processed images and later expires unselected content; restart
+preserves completed work, interrupts uncertain work, and makes no replay attempt. Existing export
+and browser tests cover formula neutralization, progress, filtering, detail, download, and a
+keyboard-usable 25-row result set. All F3 gates are offline and make no provider request.

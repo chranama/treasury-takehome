@@ -167,6 +167,8 @@ def test_v2_manifest_rejects_owner_family_mismatch() -> None:
         "expected_visible_text",
         "expected_application",
         "required_observations",
+        "expected_review",
+        "uncertainty",
         "artifacts",
     ],
 )
