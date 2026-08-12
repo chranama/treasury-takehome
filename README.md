@@ -4,7 +4,7 @@ A standalone proof of concept that helps an alcohol-label reviewer compare expec
 
 ## Project status
 
-The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. Public live extraction remains disabled by default while deployment work is completed.
+The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. The P0 application is deployed publicly; final deployed smoke and performance validation is in progress.
 
 ## Demo workflow
 
@@ -20,9 +20,9 @@ A bounded batch workflow is planned to demonstrate how the same review could be 
 
 ## Deployed application
 
-**URL:** [https://label-review.mealcheck.dev](https://label-review.mealcheck.dev) is the planned deployed URL; however, the project is not yet deployed.
+**URL:** [https://label-review.mealcheck.dev](https://label-review.mealcheck.dev)
 
-The submitted deployment will provide the working browser-based prototype without requiring local installation or access to this repository.
+The HTTPS deployment provides the working browser-based prototype without requiring local installation or access to this repository.
 
 ## Local setup and run instructions
 

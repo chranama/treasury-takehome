@@ -1,7 +1,7 @@
 # Implementation Approach
 
-**Status:** P0 implementation and provider evaluation complete; deployment validation pending
-**Last updated:** 2026-08-11
+**Status:** P0 implementation and provider evaluation complete; public deployment validation in progress
+**Last updated:** 2026-08-12
 
 ## Approach
 
@@ -25,7 +25,7 @@ flowchart LR
     A --> T["Temporary image storage"]
 ```
 
-The browser communicates only with the application origin. It does not call OpenAI, external storage, analytics, public CDNs, or third-party font services. The backend serves the compiled frontend and `/api/*` routes from the same origin.
+The browser communicates only with the application origin. It does not call OpenAI, external storage, analytics, public CDNs, or third-party font services. The backend serves the compiled frontend and `/api/*` routes from the same origin. HTML responses use `Cache-Control: no-transform` to prevent edge injection and a Content Security Policy that permits runtime scripts, styles, connections, fonts, and forms only from the application origin; local image previews additionally permit browser-generated `blob:` and `data:` URLs.
 
 ## Tools
 
@@ -171,13 +171,13 @@ Deployment performance results will be added after at least 10 consecutive warm 
 
 ## Deployment and network assumptions
 
-The production-shaped demo will run at [`https://label-review.mealcheck.dev`](https://label-review.mealcheck.dev) as one Uvicorn process in a project-owned Python 3.12 environment on an existing macOS host. That host was already available for the deployed [MealCheck project](https://github.com/chranama/MealCheck), so reusing it avoids provisioning another server for a short-lived prototype and builds on an established macOS deployment path. The `mealcheck.dev` domain is likewise reused from MealCheck, while the dedicated `label-review` subdomain gives this application its own HTTPS route and keeps it distinct from MealCheck's frontend and API.
+The production-shaped demo runs at [`https://label-review.mealcheck.dev`](https://label-review.mealcheck.dev) as one Uvicorn process in a project-owned Python 3.12 environment on an existing macOS host. That host was already available for the deployed [MealCheck project](https://github.com/chranama/MealCheck), so reusing it avoids provisioning another server for a short-lived prototype and builds on an established macOS deployment path. The `mealcheck.dev` domain is likewise reused from MealCheck, while the dedicated `label-review` subdomain gives this application its own HTTPS route and keeps it distinct from MealCheck's frontend and API.
 
-A dedicated `launchd` service will start and restart the application. A dedicated Cloudflare tunnel route will expose the localhost-only service over HTTPS. Docker is not required on the deployment host, and Node is used only to build the frontend.
+A dedicated `launchd` service starts and restarts the application. A dedicated Cloudflare tunnel route exposes the localhost-only service over HTTPS. Docker is not required on the deployment host, and Node is used only to build the frontend.
 
-The browser-visible origin will supply all P0 runtime assets and API routes. The backend's required external runtime dependency is OpenAI at `api.openai.com`. Health and readiness endpoints will check local process, configuration, and database state without making a model request.
+The browser-visible origin supplies all P0 runtime assets and API routes. The backend's required external runtime dependency is OpenAI at `api.openai.com`. Health and readiness endpoints check local process, configuration, and database state without making a model request.
 
-This deployment is appropriate for an evaluated prototype, not a production government service. It has no uptime SLA, authentication, FedRAMP authorization, government records-management controls, or demonstrated Treasury allowlisting. The public deployment will identify temporary provider or capacity failures rather than exposing configuration details or stack traces.
+This deployment is appropriate for an evaluated prototype, not a production government service. It has no uptime SLA, authentication, FedRAMP authorization, government records-management controls, or demonstrated Treasury allowlisting. The public deployment identifies temporary provider or capacity failures rather than exposing configuration details or stack traces.
 
 ## Assumptions and tradeoffs
 

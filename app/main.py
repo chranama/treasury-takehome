@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from app.api.correlation import CorrelationIdMiddleware
 from app.api.errors import install_exception_handlers
@@ -21,6 +20,7 @@ from app.extraction import (
     OpenAIExtractionAdapter,
     create_extraction_adapter,
 )
+from app.frontend import FrontendStaticFiles
 from app.reviews import AttemptGate, NoCostFakeAttemptGate, ReviewService, SQLiteUsageGate
 from app.storage.images import DEFAULT_IMAGE_LIMITS
 
@@ -106,7 +106,7 @@ def create_app(
     if frontend_index.is_file():
         application.mount(
             "/",
-            StaticFiles(directory=resolved_settings.frontend_dist_path, html=True),
+            FrontendStaticFiles(directory=resolved_settings.frontend_dist_path, html=True),
             name="frontend",
         )
     else:

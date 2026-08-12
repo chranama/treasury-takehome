@@ -16,9 +16,11 @@ from deploy.macos import run_server, smoke_p0
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEPLOY_ROOT = PROJECT_ROOT / "deploy" / "macos"
 SHELL_ASSETS = [
+    "activate-cloudflare-route.sh",
     "build-release.sh",
     "check-service.sh",
     "deploy-release.sh",
+    "enable-cloudflare-client-ip.sh",
     "install-release.sh",
     "install-service.sh",
     "preflight-host.sh",
@@ -120,6 +122,59 @@ def test_manual_deployment_orchestrator_is_deliberate_and_commit_attributed() ->
     assert "Automatic rollback was not attempted" in content
     assert "git pull" not in content
     assert "git clone" not in content
+
+
+def test_cloudflare_route_activation_preserves_mealcheck_and_has_rollback() -> None:
+    path = DEPLOY_ROOT / "activate-cloudflare-route.sh"
+    content = path.read_text(encoding="utf-8")
+
+    unconfirmed = subprocess.run(
+        [str(path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert unconfirmed.returncode != 0
+    assert "usage: activate-cloudflare-route.sh" in unconfirmed.stderr
+
+    assert '"${1:-}" = "--confirm-shared-tunnel-change"' in content
+    assert 'MEALCHECK_HOST="api.mealcheck.dev"' in content
+    assert 'TREASURY_HOST="label-review.mealcheck.dev"' in content
+    assert "service: http://127.0.0.1:8080" in content
+    assert "service: http://127.0.0.1:8081" in content
+    assert 'cloudflared tunnel --config "$CONFIG" ingress validate' in content
+    assert 'cloudflared tunnel --config "$candidate" ingress validate' in content
+    assert "baseline_status=$(" in content
+    assert '/bin/kill -TERM "$old_pid"' in content
+    assert 'check-service.sh" public' in content
+    assert 'chmod 600 "$backup"' in content
+    assert 'cp -p "$backup" "$CONFIG.rollback"' in content
+    assert "sudo" not in content
+
+
+def test_cloudflare_client_identity_transition_is_guarded_and_reversible() -> None:
+    path = DEPLOY_ROOT / "enable-cloudflare-client-ip.sh"
+    content = path.read_text(encoding="utf-8")
+
+    unconfirmed = subprocess.run(
+        [str(path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert unconfirmed.returncode != 0
+    assert "usage: enable-cloudflare-client-ip.sh" in unconfirmed.stderr
+
+    assert '"${1:-}" = "--confirm-tunnel-exclusive"' in content
+    assert "TREASURY_TRUST_CLOUDFLARE_CLIENT_IP=false" in content
+    assert "TREASURY_TRUST_CLOUDFLARE_CLIENT_IP=true" in content
+    assert "stat -f '%OLp' \"$ENV_FILE\"" in content
+    assert 'chmod 600 "$next_file"' in content
+    assert 'restart-service.sh" --confirm-no-active-reviews' in content
+    assert 'check-service.sh" public' in content
+    assert 'cp "$rollback_file" "$ENV_FILE.restore"' in content
+    assert 'rm -f -- "$rollback_file"' in content
+    assert "sudo" not in content
 
 
 def test_runtime_logging_is_bounded_and_access_log_is_disabled(tmp_path: Path) -> None:

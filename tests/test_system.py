@@ -8,6 +8,7 @@ from openai import AsyncOpenAI
 
 from app.config import Settings
 from app.extraction import OpenAIExtractionAdapter
+from app.frontend import HTML_CACHE_CONTROL, HTML_CONTENT_SECURITY_POLICY
 from app.main import create_app
 
 
@@ -146,3 +147,30 @@ def test_root_explains_when_frontend_has_not_been_built(tmp_path: Path) -> None:
 
     assert response.status_code == 503
     assert response.json()["status"] == "frontend_not_built"
+
+
+def test_compiled_frontend_prevents_edge_injection_and_remote_runtime_access(
+    tmp_path: Path,
+) -> None:
+    frontend_dist = tmp_path / "dist"
+    assets = frontend_dist / "assets"
+    assets.mkdir(parents=True)
+    (frontend_dist / "index.html").write_text(
+        '<!doctype html><script src="/assets/app.js"></script>',
+        encoding="utf-8",
+    )
+    (assets / "app.js").write_text("document.body.dataset.ready = 'true'", encoding="utf-8")
+
+    settings = make_settings(tmp_path, frontend_dist_path=frontend_dist)
+    with TestClient(create_app(settings)) as client:
+        html_response = client.get("/")
+        asset_response = client.get("/assets/app.js")
+
+    assert html_response.status_code == 200
+    assert html_response.headers["cache-control"] == HTML_CACHE_CONTROL
+    assert html_response.headers["content-security-policy"] == HTML_CONTENT_SECURITY_POLICY
+    assert html_response.headers["x-content-type-options"] == "nosniff"
+    assert html_response.headers["referrer-policy"] == "no-referrer"
+    assert asset_response.status_code == 200
+    assert asset_response.headers["x-content-type-options"] == "nosniff"
+    assert "content-security-policy" not in asset_response.headers

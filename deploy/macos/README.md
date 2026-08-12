@@ -22,8 +22,10 @@ The application root contains immutable `releases/<full-commit>` directories and
 ## Files
 
 - `preflight-host.sh` repeats the safe, read-only host checks.
+- `activate-cloudflare-route.sh` validates and activates the additive public ingress while preserving MealCheck and a protected rollback config.
 - `build-release.sh` validates a clean `main`, runs non-network checks, builds the frontend, and creates a commit-attributed archive and SHA-256 file.
 - `deploy-release.sh` orchestrates a deliberate local build, private transfer, installation, guarded restart, and exact-release verification on `mealcheck-server`.
+- `enable-cloudflare-client-ip.sh` atomically enables the protected trusted-client setting only after local and public checks pass, with failure rollback.
 - `install-release.sh` verifies and installs that archive, creates an Intel-native locked Python 3.12 environment, and atomically activates it without restarting the service.
 - `install-service.sh` validates the active release and protected configuration, then installs and loads the one-time system LaunchDaemon without replacing an existing service.
 - `restart-service.sh` requires confirmation that no review is active, then asks launchd to replace the account-owned process and verifies its release, listener, health, and readiness.
@@ -148,16 +150,18 @@ an older SQLite copy as an application rollback.
 
 ## Cloudflare route
 
-The host already runs its named tunnel through the system service `dev.mealcheck.tunnel`, using `/Users/chranama-server/.cloudflared/mealcheck-api.yml`. D3 will reuse that process with one additive ingress immediately before the existing catch-all:
+The host runs its named tunnel through the system service `dev.mealcheck.tunnel`, using `/Users/chranama-server/.cloudflared/mealcheck-api.yml`. The application reuses that process with one additive ingress immediately before the existing catch-all:
 
 ```yaml
 - hostname: label-review.mealcheck.dev
   service: http://127.0.0.1:8081
 ```
 
-Do not alter the existing `api.mealcheck.dev` service value. Before restarting the tunnel, make a protected backup, validate the complete ingress configuration with cloudflared, create the DNS route to the existing tunnel, and prepare the original file for immediate rollback. A malformed shared ingress file could briefly affect MealCheck, so this is a controlled D3 action rather than part of installation.
+The D3 activation kept the existing `api.mealcheck.dev` service value unchanged, made a protected backup, validated both ingress rules, and replaced the user-owned tunnel process through launchd. The activation helper restores the prior configuration if either public route fails. A malformed shared ingress file could briefly affect MealCheck, so future changes remain controlled operations rather than part of application installation.
 
-Set `TREASURY_TRUST_CLOUDFLARE_CLIENT_IP=true` only after the public application is reachable exclusively through that tunnel. The listener must remain bound to localhost.
+`TREASURY_TRUST_CLOUDFLARE_CLIENT_IP=true` is enabled only after the application is reachable through this tunnel and the listener is confirmed on localhost. The transition helper atomically edits that one protected setting, restarts the application, and restores the prior file if public readiness fails.
+
+Cloudflare Web Analytics can inject a browser beacon into proxied HTML. The application prevents this by serving HTML with `Cache-Control: no-transform` and a same-origin Content Security Policy. Browser inspection remains part of the public release gate; routing success alone is insufficient.
 
 ## Boundaries
 
