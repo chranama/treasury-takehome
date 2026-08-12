@@ -83,10 +83,17 @@ class PreflightIssueCode(StrEnum):
     AGGREGATE_UPLOAD_TOO_LARGE = "aggregate_upload_too_large"
     UNSUPPORTED_SPREADSHEET = "unsupported_spreadsheet"
     MALFORMED_SPREADSHEET = "malformed_spreadsheet"
+    ENCRYPTED_WORKBOOK = "encrypted_workbook"
+    MACRO_ENABLED_WORKBOOK = "macro_enabled_workbook"
+    MISSING_BATCH_WORKSHEET = "missing_batch_worksheet"
+    SOURCE_ROW_LIMIT_EXCEEDED = "source_row_limit_exceeded"
+    WORKBOOK_EXPANSION_LIMIT_EXCEEDED = "workbook_expansion_limit_exceeded"
     INVALID_CSV_ENCODING = "invalid_csv_encoding"
+    NUL_BYTE_NOT_ALLOWED = "nul_byte_not_allowed"
     MISSING_REQUIRED_COLUMN = "missing_required_column"
     UNEXPECTED_COLUMN = "unexpected_column"
     DUPLICATE_COLUMN = "duplicate_column"
+    INVALID_COLUMN_ORDER = "invalid_column_order"
     CELL_TOO_LONG = "cell_too_long"
     FORMULA_NOT_ALLOWED = "formula_not_allowed"
     EXTERNAL_LINK_NOT_ALLOWED = "external_link_not_allowed"
@@ -99,6 +106,10 @@ class PreflightIssueCode(StrEnum):
     AMBIGUOUS_IMAGE_FILENAME = "ambiguous_image_filename"
     UNREFERENCED_IMAGE = "unreferenced_image"
     UNSUPPORTED_IMAGE = "unsupported_image"
+    EMPTY_IMAGE = "empty_image"
+    IMAGE_TOO_LARGE = "image_too_large"
+    ANIMATED_IMAGE = "animated_image"
+    IMAGE_DIMENSIONS_EXCEEDED = "image_dimensions_exceeded"
     INVALID_IMAGE = "invalid_image"
     INVALID_BRAND = "invalid_brand"
     INVALID_CLASS_TYPE = "invalid_class_type"
@@ -118,12 +129,31 @@ _ISSUE_MESSAGES: dict[PreflightIssueCode, str] = {
     PreflightIssueCode.MALFORMED_SPREADSHEET: (
         "The spreadsheet could not be read. Download a fresh template and try again."
     ),
+    PreflightIssueCode.ENCRYPTED_WORKBOOK: (
+        "Encrypted or legacy binary workbooks are not supported."
+    ),
+    PreflightIssueCode.MACRO_ENABLED_WORKBOOK: (
+        "Macro-enabled workbooks are not supported. Save a macro-free XLSX file."
+    ),
+    PreflightIssueCode.MISSING_BATCH_WORKSHEET: (
+        "The workbook must contain a worksheet named Batch."
+    ),
+    PreflightIssueCode.SOURCE_ROW_LIMIT_EXCEEDED: (
+        "Keep application rows within the first 250 spreadsheet rows."
+    ),
+    PreflightIssueCode.WORKBOOK_EXPANSION_LIMIT_EXCEEDED: (
+        "The workbook expands beyond the safe processing limit."
+    ),
     PreflightIssueCode.INVALID_CSV_ENCODING: "Save the CSV as UTF-8 and try again.",
+    PreflightIssueCode.NUL_BYTE_NOT_ALLOWED: "Remove NUL characters from the CSV and try again.",
     PreflightIssueCode.MISSING_REQUIRED_COLUMN: "A required spreadsheet column is missing.",
     PreflightIssueCode.UNEXPECTED_COLUMN: (
         "Remove spreadsheet columns that are not in the template."
     ),
     PreflightIssueCode.DUPLICATE_COLUMN: "Each template column may appear only once.",
+    PreflightIssueCode.INVALID_COLUMN_ORDER: (
+        "Keep the spreadsheet columns in the same order as the template."
+    ),
     PreflightIssueCode.CELL_TOO_LONG: "Shorten this spreadsheet value and try again.",
     PreflightIssueCode.FORMULA_NOT_ALLOWED: "Replace the formula with its visible text value.",
     PreflightIssueCode.EXTERNAL_LINK_NOT_ALLOWED: "Remove external workbook links and try again.",
@@ -140,6 +170,12 @@ _ISSUE_MESSAGES: dict[PreflightIssueCode, str] = {
     ),
     PreflightIssueCode.UNREFERENCED_IMAGE: "This selected image is not referenced by any row.",
     PreflightIssueCode.UNSUPPORTED_IMAGE: "Choose a JPEG, PNG, or WebP image.",
+    PreflightIssueCode.EMPTY_IMAGE: "Choose a non-empty JPEG, PNG, or WebP image.",
+    PreflightIssueCode.IMAGE_TOO_LARGE: "Choose an image no larger than 10 MB.",
+    PreflightIssueCode.ANIMATED_IMAGE: "Animated images are not supported.",
+    PreflightIssueCode.IMAGE_DIMENSIONS_EXCEEDED: (
+        "Choose an image no larger than 40 megapixels or 6,000 pixels on either side."
+    ),
     PreflightIssueCode.INVALID_IMAGE: "The selected image could not be validated.",
     PreflightIssueCode.INVALID_BRAND: "Enter an expected brand name of at most 200 characters.",
     PreflightIssueCode.INVALID_CLASS_TYPE: (

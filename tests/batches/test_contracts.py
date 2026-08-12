@@ -48,6 +48,14 @@ def test_preflight_messages_are_derived_from_stable_codes() -> None:
     assert "severity" in issue.model_dump()
 
 
+def test_every_preflight_issue_code_has_a_bounded_public_message() -> None:
+    for code in PreflightIssueCode:
+        issue = PreflightIssue(code=code, scope=PreflightIssueScope.BATCH)
+
+        assert issue.message
+        assert len(issue.message) <= 120
+
+
 def test_unknown_and_expired_batches_share_one_bounded_not_found_message() -> None:
     error = BatchErrorResponse(
         code=BatchErrorCode.NOT_FOUND,

@@ -1,6 +1,6 @@
 # P1 Batch Contracts
 
-**Status:** Milestone P1.0 contract
+**Status:** Milestone P1.0 contract with P1.1 parsing policy
 
 **Schema proposal version:** 2
 
@@ -49,6 +49,9 @@ multiple original filenames that resolve to the same normalized key are ambiguou
 | Cases | 25 nonblank data rows |
 | Initially selected images | 25 |
 | Spreadsheet file | 1 MiB |
+| XLSX archive entries | 200 |
+| XLSX uncompressed content | 10 MiB |
+| Spreadsheet source-row span | 250 rows, including blank rows |
 | Spreadsheet and images combined | 100 MiB |
 | Any populated spreadsheet cell | 500 Unicode code points |
 | Application ID | 100 Unicode code points |
@@ -64,6 +67,45 @@ multiple original filenames that resolve to the same normalized key are ambiguou
 
 The 100 MiB aggregate cap is independent of the 10 MiB per-image cap. A 25-case package remains a
 valid product shape, but its images may need to be compressed to fit the bounded request envelope.
+
+## P1.1 parsing and association policy
+
+The P1.1 parser makes the following concrete choices within the P1 contract:
+
+- File suffix selects the spreadsheet parser. `.csv` and `.xlsx` are accepted case-insensitively;
+  `.xlsm` is rejected explicitly and other suffixes are unsupported. Content is still validated and
+  browser MIME types are not trusted.
+- CSV accepts strict UTF-8 with or without a UTF-8 byte-order mark. NUL bytes, invalid encoding, and
+  malformed quoting are rejected.
+- XLSX parsing reads only the exact `Batch` worksheet. Additional worksheets, including the
+  generated `Instructions` sheet, are ignored. A missing `Batch` sheet is an error.
+- XLSX ZIP metadata is inspected before OpenPyXL loads the workbook. Encrypted entries, compound
+  encrypted/binary files, VBA content, external-link parts, more than 200 archive entries, or more
+  than 10 MiB of uncompressed content are rejected.
+- A spreadsheet may span at most 250 source rows, including blank rows. This complements the
+  25-nonblank-case limit and prevents a sparse XLSX dimension from causing unbounded iteration.
+- Actual XLSX formula cells are rejected. The parser uses `data_only=False` and never substitutes a
+  cached formula result. CSV cells are always parsed as data because CSV has no formula type.
+- Text is trimmed and normalized to NFC. Numeric XLSX cells are converted to stable display text;
+  this allows numeric application IDs and expected numeric fields without evaluating formulas.
+- Overlong values retain only the documented bounded prefix and receive an error. Uploaded content
+  beyond a field's response/storage limit is never echoed or carried into a draft contract.
+- Image association is one-to-one. Reusing one normalized image filename in multiple spreadsheet
+  rows is a duplicate-reference error, because processed images are deleted per case later in P1.
+- Every structurally admissible selected image passes through the existing byte-signature, decode,
+  dimension, animation, orientation, and metadata-stripping boundary. Filename and MIME claims do
+  not decide image type.
+- A valid image may be prepared for a row whose expected values still need correction, but the case
+  remains `needs_correction` and is not eligible for extraction.
+- A structurally invalid spreadsheet is deleted immediately after parsing and prevents image decode.
+  Raw image spools are then deleted on context exit. This avoids expensive image work for a package
+  that cannot become a draft.
+- Unreferenced valid images are validated and reported as warnings. Missing, duplicate, ambiguous,
+  or invalid associations are never chosen automatically.
+
+The preflight preparation result is an async context manager. Normalized image paths are valid only
+inside that context; P1.2 must copy them to protected draft storage before exit. Raw spreadsheet and
+image-spool files are never part of the returned contract.
 
 ## Preflight issues
 
