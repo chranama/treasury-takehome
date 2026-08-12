@@ -1,4 +1,4 @@
-"""Reviewed P1 schema proposal; migration application belongs to Milestone P1.2."""
+"""Additive schema migration for short-lived P1 batch content."""
 
 BATCH_SCHEMA_VERSION = 2
 
@@ -8,7 +8,7 @@ CONTENT_BEARING_BATCH_TABLES = frozenset(
 OPERATIONAL_USAGE_TABLES = frozenset({"review_submissions", "provider_attempts"})
 
 BATCH_SCHEMA_PROPOSAL_SQL = """
-CREATE TABLE batch_reviews (
+CREATE TABLE IF NOT EXISTS batch_reviews (
     batch_id TEXT PRIMARY KEY,
     status TEXT NOT NULL CHECK (
         status IN ('draft', 'queued', 'processing', 'completed', 'interrupted')
@@ -27,7 +27,7 @@ CREATE TABLE batch_reviews (
     )
 );
 
-CREATE TABLE batch_images (
+CREATE TABLE IF NOT EXISTS batch_images (
     image_id TEXT PRIMARY KEY,
     batch_id TEXT NOT NULL,
     storage_key TEXT NOT NULL UNIQUE,
@@ -47,12 +47,14 @@ CREATE TABLE batch_images (
     FOREIGN KEY (batch_id) REFERENCES batch_reviews(batch_id) ON DELETE CASCADE
 );
 
-CREATE TABLE batch_cases (
+CREATE TABLE IF NOT EXISTS batch_cases (
     case_id TEXT PRIMARY KEY,
     batch_id TEXT NOT NULL,
     row_number INTEGER NOT NULL CHECK (row_number >= 2),
     application_id TEXT NOT NULL,
-    normalized_application_id TEXT NOT NULL,
+    normalized_application_id TEXT,
+    label_image_filename TEXT NOT NULL,
+    normalized_label_image_filename TEXT,
     expected_brand TEXT NOT NULL,
     expected_class_type TEXT NOT NULL,
     expected_abv TEXT NOT NULL,
@@ -81,7 +83,7 @@ CREATE TABLE batch_cases (
     UNIQUE (batch_id, row_number)
 );
 
-CREATE TABLE batch_case_results (
+CREATE TABLE IF NOT EXISTS batch_case_results (
     case_id TEXT PRIMARY KEY,
     result_json TEXT NOT NULL,
     processing_mode TEXT NOT NULL CHECK (processing_mode IN ('synthetic', 'live')),
@@ -90,13 +92,13 @@ CREATE TABLE batch_case_results (
     FOREIGN KEY (case_id) REFERENCES batch_cases(case_id) ON DELETE CASCADE
 );
 
-CREATE INDEX batch_reviews_expires_at_idx ON batch_reviews (expires_at);
-CREATE INDEX batch_images_batch_filename_idx
+CREATE INDEX IF NOT EXISTS batch_reviews_expires_at_idx ON batch_reviews (expires_at);
+CREATE INDEX IF NOT EXISTS batch_images_batch_filename_idx
     ON batch_images (batch_id, normalized_filename);
-CREATE INDEX batch_images_expiry_status_idx ON batch_images (expires_at, status);
-CREATE INDEX batch_cases_batch_status_idx ON batch_cases (batch_id, status);
-CREATE INDEX batch_cases_batch_application_idx
+CREATE INDEX IF NOT EXISTS batch_images_expiry_status_idx ON batch_images (expires_at, status);
+CREATE INDEX IF NOT EXISTS batch_cases_batch_status_idx ON batch_cases (batch_id, status);
+CREATE INDEX IF NOT EXISTS batch_cases_batch_application_idx
     ON batch_cases (batch_id, normalized_application_id);
-CREATE INDEX batch_cases_expires_at_idx ON batch_cases (expires_at);
-CREATE INDEX batch_case_results_expires_at_idx ON batch_case_results (expires_at);
+CREATE INDEX IF NOT EXISTS batch_cases_expires_at_idx ON batch_cases (expires_at);
+CREATE INDEX IF NOT EXISTS batch_case_results_expires_at_idx ON batch_case_results (expires_at);
 """

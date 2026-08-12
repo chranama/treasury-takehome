@@ -39,6 +39,7 @@ def make_settings(tmp_path: Path, **overrides: object) -> Settings:
         "app_env": "test",
         "database_path": tmp_path / "treasury.sqlite3",
         "temp_dir": tmp_path / "tmp",
+        "batch_image_dir": tmp_path / "batch-images",
         "frontend_dist_path": tmp_path / "dist",
         "extraction_backend": "fake",
         "live_extraction_enabled": False,

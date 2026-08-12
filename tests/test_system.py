@@ -16,6 +16,7 @@ def make_settings(tmp_path: Path, **overrides: object) -> Settings:
         "app_env": "test",
         "database_path": tmp_path / "treasury.sqlite3",
         "temp_dir": tmp_path / "tmp",
+        "batch_image_dir": tmp_path / "batch-images",
         "frontend_dist_path": tmp_path / "dist",
         "extraction_backend": "fake",
         "live_extraction_enabled": False,
@@ -42,6 +43,8 @@ def test_health_and_readiness_initialize_local_state(tmp_path: Path) -> None:
     }
     assert settings.database_path.is_file()
     assert settings.temp_dir.is_dir()
+    assert settings.batch_image_dir.is_dir()
+    assert list(settings.batch_image_dir.iterdir()) == []
 
 
 def test_readiness_reports_missing_openai_configuration_without_provider_call(
@@ -146,3 +149,9 @@ def test_root_explains_when_frontend_has_not_been_built(tmp_path: Path) -> None:
 
     assert response.status_code == 503
     assert response.json()["status"] == "frontend_not_built"
+
+
+def test_p1_2_does_not_expose_a_batch_collection_endpoint(tmp_path: Path) -> None:
+    application = create_app(make_settings(tmp_path))
+
+    assert all(getattr(route, "path", None) != "/api/batches" for route in application.routes)

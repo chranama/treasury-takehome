@@ -13,6 +13,7 @@ from app.api.request_limits import (
 )
 from app.api.reviews import router as reviews_router
 from app.api.system import router as system_router
+from app.batches.drafts import BatchDraftService
 from app.config import Settings, get_settings
 from app.db import initialize_database
 from app.extraction import (
@@ -34,6 +35,12 @@ def create_app(
     resolved_settings = settings or get_settings()
     resolved_adapter = extraction_adapter
     resolved_attempt_gate = attempt_gate
+    batch_draft_service = BatchDraftService(
+        database_path=resolved_settings.database_path,
+        image_dir=resolved_settings.batch_image_dir,
+        temp_dir=resolved_settings.temp_dir,
+        cleanup_interval_seconds=resolved_settings.batch_cleanup_interval_seconds,
+    )
     owned_openai_adapter: OpenAIExtractionAdapter | None = None
     if resolved_settings.extraction_backend == "fake":
         resolved_adapter = resolved_adapter or create_extraction_adapter(resolved_settings)
@@ -66,13 +73,15 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
-        resolved_settings.prepare_local_directories()
-        initialize_database(resolved_settings.database_path)
-        if isinstance(resolved_attempt_gate, SQLiteUsageGate):
-            await resolved_attempt_gate.reconcile_incomplete()
         try:
+            resolved_settings.prepare_local_directories()
+            initialize_database(resolved_settings.database_path)
+            await batch_draft_service.start()
+            if isinstance(resolved_attempt_gate, SQLiteUsageGate):
+                await resolved_attempt_gate.reconcile_incomplete()
             yield
         finally:
+            await batch_draft_service.aclose()
             if owned_openai_adapter is not None:
                 await owned_openai_adapter.aclose()
 
@@ -94,6 +103,7 @@ def create_app(
     application.add_middleware(CorrelationIdMiddleware)
     install_exception_handlers(application)
     application.state.settings = resolved_settings
+    application.state.batch_draft_service = batch_draft_service
     application.state.review_service = ReviewService(
         settings=resolved_settings,
         adapter=resolved_adapter,

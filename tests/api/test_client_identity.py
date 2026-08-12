@@ -11,6 +11,7 @@ def settings(tmp_path: Path, *, trust_cloudflare: bool) -> Settings:
         _env_file=None,
         database_path=tmp_path / "db.sqlite3",
         temp_dir=tmp_path / "tmp",
+        batch_image_dir=tmp_path / "batch-images",
         frontend_dist_path=tmp_path / "dist",
         trust_cloudflare_client_ip=trust_cloudflare,
     )

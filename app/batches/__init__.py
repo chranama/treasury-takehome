@@ -28,6 +28,7 @@ from app.batches.contracts import (
 )
 from app.batches.export import CSV_EXPORT_COLUMNS, neutralize_spreadsheet_formula
 from app.batches.limits import (
+    BATCH_CLEANUP_INTERVAL_SECONDS,
     BATCH_RETENTION_HOURS,
     GRACEFUL_SHUTDOWN_DRAIN_SECONDS,
     MAX_AGGREGATE_UPLOAD_BYTES,
@@ -47,10 +48,12 @@ from app.batches.parsing import (
     ParsedSpreadsheet,
     ParsedSpreadsheetRow,
     SpreadsheetKind,
+    ValidatedExpectedInput,
     is_base_filename,
     normalize_filename,
     normalize_match_text,
     parse_spreadsheet,
+    validate_expected_input,
 )
 from app.batches.preflight import (
     ParsedBatchCase,
@@ -76,6 +79,7 @@ from app.batches.templates import (
 __all__ = [
     "ALLOWED_BATCH_TRANSITIONS",
     "ALLOWED_CASE_TRANSITIONS",
+    "BATCH_CLEANUP_INTERVAL_SECONDS",
     "BATCH_RETENTION_HOURS",
     "BATCH_NOT_FOUND_MESSAGE",
     "BATCH_SCHEMA_PROPOSAL_SQL",
@@ -125,6 +129,7 @@ __all__ = [
     "ParsedSpreadsheetRow",
     "SpreadsheetKind",
     "StoredBatchCaseResult",
+    "ValidatedExpectedInput",
     "batch_transition_allowed",
     "case_transition_allowed",
     "generate_csv_template",
@@ -135,4 +140,5 @@ __all__ = [
     "neutralize_spreadsheet_formula",
     "parse_spreadsheet",
     "prepare_batch_preflight",
+    "validate_expected_input",
 ]

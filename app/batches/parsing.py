@@ -91,6 +91,13 @@ class ParsedSpreadsheet:
 
 
 @dataclass(frozen=True, slots=True)
+class ValidatedExpectedInput:
+    expected_input: BatchExpectedInput
+    normalized_expected: ExpectedReview | None
+    issues: tuple[PreflightIssue, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class _RawCell:
     text: str
     formula: bool = False
@@ -157,6 +164,74 @@ def is_base_filename(value: str) -> bool:
         and not windows.drive
         and "/" not in value
         and "\\" not in value
+    )
+
+
+def validate_expected_input(
+    expected_input: BatchExpectedInput,
+    *,
+    row_number: int,
+) -> ValidatedExpectedInput:
+    """Normalize corrected expected values through the same rules as spreadsheet rows."""
+
+    brand = _normalize_cell(expected_input.brand_name)
+    class_type = _normalize_cell(expected_input.class_type)
+    abv_text = _normalize_cell(expected_input.expected_abv)
+    net_contents_text = _normalize_cell(expected_input.expected_net_contents)
+    issues: list[PreflightIssue] = []
+    if not brand:
+        issues.append(
+            _row_issue(
+                PreflightIssueCode.INVALID_BRAND,
+                row_number,
+                BatchField.EXPECTED_BRAND,
+            )
+        )
+    if not class_type:
+        issues.append(
+            _row_issue(
+                PreflightIssueCode.INVALID_CLASS_TYPE,
+                row_number,
+                BatchField.EXPECTED_CLASS_TYPE,
+            )
+        )
+    abv = _parse_expected_abv(abv_text)
+    if abv is None:
+        issues.append(
+            _row_issue(
+                PreflightIssueCode.INVALID_ABV,
+                row_number,
+                BatchField.EXPECTED_ABV,
+            )
+        )
+    net_contents = _parse_expected_net_contents(net_contents_text)
+    if net_contents is None:
+        issues.append(
+            _row_issue(
+                PreflightIssueCode.INVALID_NET_CONTENTS,
+                row_number,
+                BatchField.EXPECTED_NET_CONTENTS,
+            )
+        )
+
+    bounded_input = BatchExpectedInput(
+        brand_name=brand,
+        class_type=class_type,
+        expected_abv=abv_text,
+        expected_net_contents=net_contents_text,
+    )
+    normalized_expected = None
+    if not issues and abv is not None and net_contents is not None:
+        normalized_expected = ExpectedReview(
+            brand_name=brand,
+            class_type=class_type,
+            abv=abv,
+            net_contents=net_contents,
+        )
+    return ValidatedExpectedInput(
+        expected_input=bounded_input,
+        normalized_expected=normalized_expected,
+        issues=tuple(issues),
     )
 
 
@@ -481,59 +556,19 @@ def _parse_data_row(row_number: int, cells: list[_RawCell]) -> _MutableRow:
             )
         )
 
-    abv = _parse_expected_abv(abv_text)
-    if not brand:
-        issues.append(
-            _row_issue(
-                PreflightIssueCode.INVALID_BRAND,
-                row_number,
-                BatchField.EXPECTED_BRAND,
-            )
-        )
-    if not class_type:
-        issues.append(
-            _row_issue(
-                PreflightIssueCode.INVALID_CLASS_TYPE,
-                row_number,
-                BatchField.EXPECTED_CLASS_TYPE,
-            )
-        )
-    if abv is None:
-        issues.append(
-            _row_issue(
-                PreflightIssueCode.INVALID_ABV,
-                row_number,
-                BatchField.EXPECTED_ABV,
-            )
-        )
-    net_contents = _parse_expected_net_contents(net_contents_text)
-    if net_contents is None:
-        issues.append(
-            _row_issue(
-                PreflightIssueCode.INVALID_NET_CONTENTS,
-                row_number,
-                BatchField.EXPECTED_NET_CONTENTS,
-            )
-        )
-
     expected_input = BatchExpectedInput(
         brand_name=brand,
         class_type=class_type,
         expected_abv=abv_text,
         expected_net_contents=net_contents_text,
     )
+    validated_expected = validate_expected_input(expected_input, row_number=row_number)
+    issues.extend(validated_expected.issues)
     expected_has_errors = any(
         issue.severity == PreflightIssueSeverity.ERROR and issue.field in _EXPECTED_FIELDS
         for issue in issues
     )
-    normalized_expected = None
-    if not expected_has_errors and abv is not None and net_contents is not None:
-        normalized_expected = ExpectedReview(
-            brand_name=brand,
-            class_type=class_type,
-            abv=abv,
-            net_contents=net_contents,
-        )
+    normalized_expected = None if expected_has_errors else validated_expected.normalized_expected
 
     return _MutableRow(
         row_number=row_number,
@@ -541,7 +576,7 @@ def _parse_data_row(row_number: int, cells: list[_RawCell]) -> _MutableRow:
         normalized_application_id=normalized_application_id,
         label_image_filename=label_filename,
         normalized_label_image_filename=normalized_label_filename,
-        expected_input=expected_input,
+        expected_input=validated_expected.expected_input,
         normalized_expected=normalized_expected,
         issues=_deduplicate_issues(issues),
     )

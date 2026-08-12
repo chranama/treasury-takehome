@@ -1,6 +1,6 @@
 # P1 Batch Contracts
 
-**Status:** Milestone P1.0 contract with P1.1 parsing policy
+**Status:** Milestone P1.0 contract with P1.1 parsing and P1.2 draft persistence
 
 **Schema proposal version:** 2
 
@@ -9,9 +9,9 @@
 ## Milestone boundary
 
 P1.0 defines provider-neutral domain contracts, deterministic blank templates, API behavior,
-export safety, and an additive database proposal. It does not parse reviewer workbooks, persist
-drafts, expose batch routes, run background work, or apply a database migration. Those behaviors
-belong to P1.1 through P1.5.
+export safety, and an additive database proposal. P1.1 implements bounded workbook preflight, and
+P1.2 applies the additive migration and persists short-lived drafts. Batch routes, reviewer UI,
+provider work, and result APIs remain P1.3 through P1.5 work.
 
 No module under `app/batches` may import the OpenAI SDK. Each selected case will eventually call
 the existing P0 review boundary independently; expected values, filenames, spreadsheet content,
@@ -104,8 +104,41 @@ The P1.1 parser makes the following concrete choices within the P1 contract:
   or invalid associations are never chosen automatically.
 
 The preflight preparation result is an async context manager. Normalized image paths are valid only
-inside that context; P1.2 must copy them to protected draft storage before exit. Raw spreadsheet and
-image-spool files are never part of the returned contract.
+inside that context; P1.2 copies associated images to protected draft storage before exit. Raw
+spreadsheet and image-spool files are never part of the returned contract.
+
+## P1.2 draft persistence policy
+
+P1.2 makes the following concrete lifecycle and storage choices:
+
+- Batch, case, and image identifiers are UUIDv4 values. Files use a separate random 128-bit storage
+  key, so neither an identifier nor an uploaded filename determines a filesystem path.
+- A draft is created only from a structurally valid preflight containing at least one parsed case.
+  Row-level correction issues are persisted; a whole-package structural error is not persisted.
+- Only valid images associated with a case are copied from preflight into draft storage. Invalid,
+  ambiguous, duplicate, and unreferenced images remain preflight-owned and are deleted on context
+  exit.
+- The image directory is mode `0700` and normalized image files are mode `0600`. Stored files remain
+  metadata-stripped PNGs produced by the existing byte-based intake boundary.
+- Cases retain the bounded spreadsheet image filename even when no image was associated. Their
+  normalized application ID and normalized image filename are nullable so invalid rows can be
+  recovered and corrected after refresh.
+- Expected-value correction revalidates only the selected case and does not rewrite another case or
+  its image reference. Invalid corrections remain bounded `needs_correction` drafts.
+- Image replacement is an explicit case association, so it does not use batch-wide filename
+  matching. A valid replacement may share its display filename with another case without ambiguity;
+  the case UUID determines the target. A rejected replacement leaves the prior image unchanged.
+- Replacement stores the new image before the database swap, commits the case association, and then
+  removes the old file. A failed old-file deletion becomes an orphan for the lifecycle cleanup to
+  retry.
+- Expiry is exactly 24 hours from draft creation and is never extended by retrieval, correction, or
+  replacement. Unknown, expired, cross-batch, and non-draft mutation targets share one internal
+  not-found result.
+- Startup cleanup removes expired database content and unreferenced files before the app accepts
+  work. The periodic task wakes at least every five minutes and sooner for the next known expiry.
+  It scans only direct children of the private image directory.
+- The draft service intentionally has no collection/list operation, and P1.2 adds no HTTP routes.
+  Service operations emit no content, filename, identifier, or source-address logs.
 
 ## Preflight issues
 
@@ -188,7 +221,7 @@ Every user- or model-derived cell beginning with `=`, `+`, `-`, `@`, tab, or car
 prefixed with an apostrophe before normal CSV quoting. Output is UTF-8 with a stable header order and
 one record per selected case.
 
-## Additive schema proposal
+## Additive schema and migration
 
 `app.batches.schema` proposes schema version 2 and valid SQLite DDL for four content-bearing tables:
 
@@ -200,13 +233,13 @@ one record per selected case.
 - `batch_case_results` for the temporary structured comparison result.
 
 These tables are distinct from `review_submissions` and `provider_attempts`, which remain the
-content-free operational usage ledger. The proposal only adds tables and indexes; it does not alter
-or discard P0 rows. P1.2 will apply the proposal transactionally and update `app_metadata` from
-schema version 1 to 2 only after successful DDL execution.
+content-free operational usage ledger. The migration only adds tables and indexes; it does not alter
+or discard P0 rows. Database initialization applies it transactionally and updates `app_metadata`
+from schema version 1 to 2 only after successful DDL execution.
 
 All four batch tables carry or inherit an absolute expiry. Image files remain outside SQLite under
 private unpredictable storage keys. Deleting a batch cascades through case content and results;
-filesystem deletion and orphan reconciliation remain explicit service work in P1.2 and P1.7.
+startup and periodic cleanup reconcile filesystem orphans independently.
 
 ## P1 requirement coverage
 

@@ -28,12 +28,15 @@ def test_batch_modules_do_not_import_openai_sdk() -> None:
     assert not violations, violations
 
 
-def test_schema_proposal_is_additive_valid_sql_and_preserves_usage_tables(tmp_path: Path) -> None:
+def test_batch_schema_is_applied_additively_and_preserves_usage_tables(tmp_path: Path) -> None:
     database_path = tmp_path / "treasury.sqlite3"
     initialize_database(database_path)
 
     with connect(database_path) as connection:
         connection.executescript(BATCH_SCHEMA_PROPOSAL_SQL)
+        version = connection.execute(
+            "SELECT value FROM app_metadata WHERE key = 'schema_version'"
+        ).fetchone()[0]
         tables = {
             row[0]
             for row in connection.execute(
@@ -42,9 +45,46 @@ def test_schema_proposal_is_additive_valid_sql_and_preserves_usage_tables(tmp_pa
         }
 
     assert BATCH_SCHEMA_VERSION == 2
+    assert version == "2"
     assert tables >= CONTENT_BEARING_BATCH_TABLES
     assert tables >= OPERATIONAL_USAGE_TABLES
     assert CONTENT_BEARING_BATCH_TABLES.isdisjoint(OPERATIONAL_USAGE_TABLES)
+
+
+def test_version_one_database_migrates_without_losing_operational_rows(tmp_path: Path) -> None:
+    database_path = tmp_path / "treasury.sqlite3"
+    initialize_database(database_path)
+    with connect(database_path) as connection:
+        connection.execute(
+            """
+            INSERT INTO review_submissions (
+                idempotency_hash, correlation_id, status, created_at
+            ) VALUES ('hash', 'correlation', 'completed', '2026-08-12T12:00:00+00:00')
+            """
+        )
+        for table in (
+            "batch_case_results",
+            "batch_cases",
+            "batch_images",
+            "batch_reviews",
+        ):
+            connection.execute(f"DROP TABLE {table}")
+        connection.execute("UPDATE app_metadata SET value = '1' WHERE key = 'schema_version'")
+
+    initialize_database(database_path)
+
+    with connect(database_path) as connection:
+        operational_row = connection.execute(
+            "SELECT correlation_id, status FROM review_submissions"
+        ).fetchone()
+        version = connection.execute(
+            "SELECT value FROM app_metadata WHERE key = 'schema_version'"
+        ).fetchone()[0]
+        case_columns = {row[1] for row in connection.execute("PRAGMA table_info(batch_cases)")}
+
+    assert operational_row == ("correlation", "completed")
+    assert version == "2"
+    assert {"label_image_filename", "normalized_label_image_filename"} <= case_columns
 
 
 def test_content_fields_do_not_enter_operational_usage_tables() -> None:
