@@ -159,6 +159,8 @@ A paired follow-up compared 40 Standard and 40 [Fast-mode](https://developers.op
 
 The versioned live fixture manifest defines four deterministic synthetic cases: a clear matching label, a net-contents mismatch, an altered Government Warning, and an unreadable label. The fixture artwork is generated locally from that manifest, and the evidence report records the manifest hash and prompt revision so a later result is attributable to one configuration. The explicitly invoked `evals.live` and `evals.tier_benchmark` commands are the only documented evaluation paths that intentionally incur provider charges. The initial run uses `high` image detail; `original` is an explicit follow-up configuration only if warning transcription at `high` does not meet the gate.
 
+The accepted `live-evaluation-v1` manifest remains frozen for historical attribution. Expanded fixture suites will use the strict v2 contract described in [Fixture Coverage and Manifest Contract](fixture-coverage.md), with explicit suite ownership, evaluation layers, observation requirements, complete deterministic outcomes, uncertainty policy, renderer identity, and artifact hashes.
+
 Raw evaluation evidence remains local and gitignored because it contains diagnostic observations and provider request identifiers. Hosted extraction remains disabled by default and cannot become ready until the API key and all private usage-control settings are present.
 
 A deployed smoke test will complete the P0 happy path in a current desktop browser and verify that browser runtime requests do not depend on third-party asset, model, storage, analytics, telemetry, or authentication domains.
