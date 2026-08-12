@@ -475,9 +475,11 @@ def test_processed_image_is_deleted_while_later_cases_remain_active(tmp_path: Pa
         active = None
         for _ in range(100):
             candidate = client.get(f"/api/batches/{created['batch_id']}").json()
-            if candidate["counts"]["completed"] == 1 and (
-                candidate["counts"]["queued"] + candidate["counts"]["processing"] > 0
-            ) and len(list(settings.batch_image_dir.glob("*.png"))) == 2:
+            if (
+                candidate["counts"]["completed"] == 1
+                and (candidate["counts"]["queued"] + candidate["counts"]["processing"] > 0)
+                and len(list(settings.batch_image_dir.glob("*.png"))) == 2
+            ):
                 active = candidate
                 break
             time.sleep(0.005)
@@ -521,8 +523,7 @@ def test_expiry_removes_unselected_image_and_every_content_bearing_batch_row(
             for table in CONTENT_BEARING_BATCH_TABLES
         }
         connection.execute(
-            "UPDATE batch_reviews SET expires_at = '2000-01-01T00:00:00+00:00' "
-            "WHERE batch_id = ?",
+            "UPDATE batch_reviews SET expires_at = '2000-01-01T00:00:00+00:00' WHERE batch_id = ?",
             (created["batch_id"],),
         )
     assert before == {

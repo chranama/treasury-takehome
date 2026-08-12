@@ -87,8 +87,7 @@ def test_generated_valid_csv_and_xlsx_package_sizes_parse_identically(
         )
         for filename, content in packages:
             images = [
-                upload(png_bytes(), f"label-{index:02d}.png")
-                for index in range(1, case_count + 1)
+                upload(png_bytes(), f"label-{index:02d}.png") for index in range(1, case_count + 1)
             ]
             async with prepare_batch_preflight(
                 upload(content, filename),
@@ -159,9 +158,7 @@ GENERATED_PREFLIGHT_MATRIX = (
         "invalid-values",
         [["APP-1", "label.png", "Brand", "Bourbon", "101", "750 oz"]],
         [("label.png", png_bytes())],
-        frozenset(
-            {PreflightIssueCode.INVALID_ABV, PreflightIssueCode.INVALID_NET_CONTENTS}
-        ),
+        frozenset({PreflightIssueCode.INVALID_ABV, PreflightIssueCode.INVALID_NET_CONTENTS}),
         0,
     ),
     GeneratedPreflightCase(

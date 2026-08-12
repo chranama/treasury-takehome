@@ -4,7 +4,7 @@ A standalone proof of concept that helps an alcohol-label reviewer compare expec
 
 ## Project status
 
-The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. The P1 batch workflow now includes templates, bounded spreadsheet preflight, recoverable 24-hour drafts, an accessible correction interface, idempotent background processing, bounded progress polling, outcome filters, reusable P0 case detail, refresh recovery, safe terminal CSV export, periodic orphan cleanup, restart reconciliation, and offline integrated regression coverage. The batch workflow is available on the dedicated `/batch` page. Public live extraction remains disabled by default while deployment work and the bounded P1 provider evaluation are completed.
+The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit P0 live-evaluation harnesses are implemented. The P1 batch workflow now includes templates, bounded spreadsheet preflight, recoverable 24-hour drafts, an accessible correction interface, idempotent background processing, bounded progress polling, outcome filters, reusable P0 case detail, refresh recovery, safe terminal CSV export, periodic orphan cleanup, restart reconciliation, and offline integrated regression coverage. The batch workflow is available on the dedicated `/batch` page. Public live extraction remains disabled by default; merging, deployment, and a bounded deployed P1 live-provider evaluation remain rollout work.
 
 ## Demo workflow
 
@@ -17,6 +17,8 @@ The core workflow allows a reviewer to:
 5. identify matches, discrepancies, and cases requiring human review.
 
 A bounded batch workflow at `/batch` can preflight and start as many as 25 ready applications while applying the same review independently to each selected case.
+
+P1 is a bounded prototype workflow, not a production batch-processing system. It does not provide authentication, reviewer roles, audit history, durable cross-process queue resume, official COLAs Online integration, automatic approval or rejection, or demonstrated throughput for 200-300-application stakeholder batches.
 
 ## Deployed application
 
@@ -84,9 +86,9 @@ npm --prefix frontend run test:e2e
 
 Ordinary automated tests do not require an OpenAI key and must not make provider calls.
 
-## Explicit live evaluation
+## Explicit P0 live evaluation
 
-The live evaluation is a separate, deliberately billable command. Configure `.env` with an OpenAI API key, then acknowledge the paid run and choose an evidence-file destination:
+The P0 live evaluation is a separate, deliberately billable command. Configure `.env` with an OpenAI API key, then acknowledge the paid run and choose an evidence-file destination:
 
 ```bash
 uv run python -m evals.live \

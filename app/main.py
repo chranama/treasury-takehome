@@ -140,6 +140,7 @@ def create_app(
 
     frontend_index = resolved_settings.frontend_dist_path / "index.html"
     if frontend_index.is_file():
+
         @application.get("/batch", include_in_schema=False)
         @application.get("/batch/", include_in_schema=False)
         def batch_frontend() -> FileResponse:

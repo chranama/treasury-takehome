@@ -149,9 +149,9 @@ The test strategy has four layers:
 1. unit tests for normalization, proof conversion, unit conversion, warning comparison, ambiguity, and status aggregation;
 2. backend integration tests for validation, APIs, SQLite reservations, idempotency, batch isolation, and error mapping with a fixed extraction adapter;
 3. frontend and browser tests for form behavior, preflight correction, progress, filtering, downloads, and accessibility basics; and
-4. an explicitly invoked live-provider evaluation over synthetic fixtures.
+4. an explicitly invoked P0 live-provider evaluation over synthetic fixtures.
 
-Ordinary automated tests make no external model calls. The live evaluation records its model, image-detail setting, fixture set, correctness, uncertainty handling, malformed-response rate, latency, token usage, and estimated cost.
+Ordinary automated tests make no external model calls. The P0 live evaluation records its model, image-detail setting, fixture set, correctness, uncertainty handling, malformed-response rate, latency, token usage, and estimated cost.
 
 On August 11, 2026, three unchanged `gpt-5.6-luna` runs at `high` detail passed all 12 versioned synthetic cases with no malformed responses or retries. The clear label passed all five checks; the known net-contents and warning alterations were detected every time; and the unreadable fixture produced uncertainty without fabricated text. Median latency was 2.70 seconds and the slowest request was 8.55 seconds. Estimated per-case cost was $0.000360 at the median and $0.000903 at the nearest-rank 95th percentile under pricing checked that day. These results support a prototype baseline only; the fixture set is small and synthetic, and the latency outlier still requires deployed-path validation.
 
@@ -160,6 +160,19 @@ A paired follow-up compared 40 Standard and 40 [Fast-mode](https://developers.op
 The versioned live fixture manifest defines four deterministic synthetic cases: a clear matching label, a net-contents mismatch, an altered Government Warning, and an unreadable label. The fixture artwork is generated locally from that manifest, and the evidence report records the manifest hash and prompt revision so a later result is attributable to one configuration. The explicitly invoked `evals.live` and `evals.tier_benchmark` commands are the only documented evaluation paths that intentionally incur provider charges. The initial run uses `high` image detail; `original` is an explicit follow-up configuration only if warning transcription at `high` does not meet the gate.
 
 Raw evaluation evidence remains local and gitignored because it contains diagnostic observations and provider request identifiers. Hosted extraction remains disabled by default and cannot become ready until the API key and all private usage-control settings are present.
+
+The implemented P1 workflow applies this same extraction boundary independently to as many as 25
+ready cases. It adds bounded CSV/XLSX preflight, short-lived corrections and image associations,
+idempotent background start, global concurrency two, refresh-safe polling and case detail, safe CSV
+export, immediate deletion of processed images, and deletion of unused content within 24 hours.
+Fixed-response regression covers mixed 25-case execution, independent failures, restart
+interruption without replay, request limits, content-free operational records, cleanup, and the
+two-page single/batch browser workflow. The bounded P1 live-provider batch is deliberately deferred
+to the deployment plan so it measures the merged, attributable release through the deployed path.
+
+P1 does not add authentication, reviewer accounts or roles, audit history, durable cross-process
+queue resume, official COLAs Online integration, automatic approval or rejection, long-term result
+history, or evidence of production throughput for 200-300-application stakeholder batches.
 
 A deployed smoke test will complete the P0 happy path in a current desktop browser and verify that browser runtime requests do not depend on third-party asset, model, storage, analytics, telemetry, or authentication domains.
 

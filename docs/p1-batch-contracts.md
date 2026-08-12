@@ -1,6 +1,6 @@
 # P1 Batch Contracts
 
-**Status:** Milestone P1.0 contract through P1.7 retention and integrated regression
+**Status:** P1.0-P1.8 implemented; deployment validation remains in Phase D5
 
 **Schema proposal version:** 2
 
@@ -17,6 +17,8 @@ bounded polling, case-detail, outcome-summary, and safe CSV download APIs. P1.6 
 batch page, progress polling, triage filters, reusable P0 detail, refresh recovery, and terminal
 download interface. P1.7 closes the non-network retention, restart, request-bound, fixture, and
 content-free regression gates.
+P1.8 records the implemented product boundary and hands the tested branch to deployment Phase D5;
+the merge, attributable release, and bounded deployed live-provider batch are deployment work.
 
 No module under `app/batches` may import the OpenAI SDK. Each selected case will eventually call
 the existing P0 review boundary independently; expected values, filenames, spreadsheet content,
