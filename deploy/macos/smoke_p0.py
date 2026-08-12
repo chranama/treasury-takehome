@@ -19,6 +19,7 @@ BASE_URLS = {
     "local": "http://127.0.0.1:8081",
     "public": "https://label-review.mealcheck.dev",
 }
+SMOKE_USER_AGENT = "TreasuryTakeHomeSmoke/1.0"
 
 
 def _multipart(case: EvaluationCase, image_bytes: bytes) -> tuple[bytes, str]:
@@ -55,6 +56,19 @@ def _case(case_id: str) -> EvaluationCase:
     raise SystemExit(f"unknown fixture; choose one of: {available}")
 
 
+def _review_request(*, base_url: str, body: bytes, content_type: str) -> Request:
+    return Request(
+        f"{base_url}/api/reviews",
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": content_type,
+            "Idempotency-Key": str(uuid.uuid4()),
+            "User-Agent": SMOKE_USER_AGENT,
+        },
+    )
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("target", choices=BASE_URLS)
@@ -77,14 +91,10 @@ def main() -> None:
         prepared = render_fixture(case, Path(directory) / "fixture.png")
         body, content_type = _multipart(case, prepared.path.read_bytes())
 
-    request = Request(
-        f"{BASE_URLS[args.target]}/api/reviews",
-        data=body,
-        method="POST",
-        headers={
-            "Content-Type": content_type,
-            "Idempotency-Key": str(uuid.uuid4()),
-        },
+    request = _review_request(
+        base_url=BASE_URLS[args.target],
+        body=body,
+        content_type=content_type,
     )
     try:
         with urlopen(request, timeout=20) as response:  # noqa: S310 - fixed allowlisted URLs

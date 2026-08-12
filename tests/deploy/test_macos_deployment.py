@@ -223,6 +223,16 @@ def test_smoke_harness_refuses_unacknowledged_provider_request(
         smoke_p0.main()
 
 
+def test_smoke_harness_uses_an_explicit_client_identifier() -> None:
+    request = smoke_p0._review_request(
+        base_url="https://label-review.mealcheck.dev",
+        body=b"body",
+        content_type="multipart/form-data; boundary=test",
+    )
+
+    assert request.get_header("User-agent") == "TreasuryTakeHomeSmoke/1.0"
+
+
 def test_public_deployment_assets_contain_no_private_limit_values() -> None:
     content = "\n".join(
         path.read_text(encoding="utf-8") for path in DEPLOY_ROOT.iterdir() if path.is_file()

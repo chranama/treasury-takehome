@@ -4,7 +4,7 @@ A standalone proof of concept that helps an alcohol-label reviewer compare expec
 
 ## Project status
 
-The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. The P0 application is deployed publicly; final deployed smoke and performance validation is in progress.
+The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. The P0 application is deployed publicly, and its public smoke, browser-origin, performance, privacy, service-restart, and host-reboot recovery gates have passed.
 
 ## Demo workflow
 
