@@ -29,13 +29,13 @@ These concerns favor a focused review aid over an ambitious attempt to automate 
 
 The prototype explores whether AI-assisted text extraction, followed by deterministic comparison rules, can reduce routine visual matching while keeping the reviewer in control. For a single review, the user supplies expected application values and label artwork. The application extracts the visible fields, compares them with the expected values, checks the Government Warning, and explains any discrepancy or uncertainty.
 
-A bounded batch workflow can demonstrate how the same review model could extend to multiple applications. It is a usability and failure-handling demonstration rather than a claim of production-scale throughput.
+The bounded batch workflow demonstrates how the same review model extends to multiple applications. It is a usability and failure-handling demonstration rather than a claim of production-scale throughput.
 
 ## Relationship to TTB systems
 
 This project is a standalone proof of concept. It does not integrate with COLAs Online, retrieve real application records, issue a COLA, or reproduce TTB's official review states. A reviewer manually supplies expected values for the demo, and only synthetic or otherwise non-sensitive label data should be used.
 
-The deployed prototype will run outside Treasury's production environment. Restricted outbound network access remains an important design constraint, but this exercise does not establish FedRAMP compliance, Treasury allowlisting, or readiness for a production government deployment.
+The deployed prototype runs outside Treasury's production environment. Restricted outbound network access remains an important design constraint, but this exercise does not establish FedRAMP compliance, Treasury allowlisting, or readiness for a production government deployment.
 
 ## Sources
 

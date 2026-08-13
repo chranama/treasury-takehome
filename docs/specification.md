@@ -1,10 +1,10 @@
 # Demo Specification
 
-**Status:** Draft
+**Status:** Implemented
 
-**Version:** 0.1
+**Version:** 1.0
 
-**Last updated:** 2026-08-10
+**Last updated:** 2026-08-12
 
 **Source:** [Treasury take-home instructions](https://github.com/treasurytakehome-rgb/instructions)
 
@@ -31,8 +31,6 @@ The application extracts those four visible fields, checks the Government Health
 ### P1: bounded batch review
 
 P1 demonstrates how the single-review model can be applied to multiple applications. It is capped at 25 cases and is not a claim of production capacity for the 200–300-application batches described by stakeholders.
-
-
 
 ## Single-review workflow
 
@@ -156,7 +154,7 @@ The application shall provide a downloadable spreadsheet template with these hum
 - Expected ABV
 - Expected Net Contents
 
-A prepared ZIP containing the spreadsheet and images may be accepted as a secondary convenience, but creating a ZIP shall not be the only batch path.
+ZIP is not an accepted input. The spreadsheet and images shall be selected separately.
 
 ### Preflight review
 
@@ -178,7 +176,7 @@ The reviewer shall be able to replace an image or correct an invalid value witho
 - Selecting a row shall open the same detailed comparison used by the single-review workflow.
 - Results shall be downloadable as CSV.
 
-Queue persistence, resume history, and production-scale throughput are outside P1.
+Durable queue resume, long-term history, and production-scale throughput are outside P1.
 
 ## Performance and reliability
 
@@ -239,7 +237,7 @@ The repository shall provide synthetic fixtures for:
 
 For the primary demonstration, an evaluator can enter:
 
-- Brand: `OLD TOM DISTILLERY`
+- Brand: `OLD TOM`
 - Class/type: `Kentucky Straight Bourbon Whiskey`
 - ABV: `45`
 - Net contents: `750 mL`

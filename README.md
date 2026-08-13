@@ -150,9 +150,16 @@ tests cover the same rendering and gate logic with fixed responses and no provid
 
 ## Documentation
 
-- [Project background](docs/background.md)
-- [Demo specification and assumptions](docs/specification.md)
-- [Implementation approach, tools, and assumptions](docs/implementation.md)
-- [Native macOS deployment assets](deploy/macos/README.md)
-- [Fixture coverage and manifest contract](docs/fixture-coverage.md)
-- [P1 batch contracts, processing, result APIs, and safe export](docs/p1-batch-contracts.md)
+| Document | Focus |
+| --- | --- |
+| [Background](docs/background.md) | TTB context, existing workflow, and prototype opportunity |
+| [Specification](docs/specification.md) | Product requirements, scope, acceptance scenarios, and limitations |
+| [Backend](docs/backend.md) | Service architecture, deterministic comparison, validation, and reliability controls |
+| [Frontend](docs/frontend.md) | React structure, interaction state, accessibility, and browser boundaries |
+| [Storage](docs/storage.md) | SQLite responsibilities, image lifecycle, retention, cleanup, and logging boundaries |
+| [Vision extraction](docs/vision-extraction.md) | Model observation contract, request configuration, failures, data handling, and limitations |
+| [Deployment](docs/deployment.md) | Runtime topology, release process, health, network boundary, and P1 rollout state |
+| [API](docs/api.md) | Routes, request contracts, idempotency, errors, and response limits |
+| [Evaluation](docs/evaluation.md) | Test layers, versioned fixtures, hosted-model results, deployed measurements, and claim boundaries |
+| [Workflows](docs/workflows.md) | P0 and P1 inputs, preflight, state transitions, processing, results, and examples |
+| [macOS deployment assets](deploy/macos/README.md) | Exact release, installation, restart, rollback, and smoke-test commands |
