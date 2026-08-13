@@ -109,6 +109,21 @@ HTML responses use a same-origin Content Security Policy and `Cache-Control: no-
 prevent browser runtime injection. Trusted Cloudflare client-address handling is enabled only when
 the origin is confirmed to be reachable exclusively through the tunnel.
 
+## Recovery boundaries
+
+- An application restart replaces only `dev.mealcheck.label-review`, requires confirmation that no
+  P0 review or P1 batch is active, and preserves the selected immutable release.
+- A shared-tunnel restart is owned by neutral host infrastructure and can interrupt MealCheck and
+  Cloudflare SSH as well as this application. Treasury release tooling never performs it.
+- A controlled macOS reboot tests the complete launchd, network, administration, and application
+  recovery path. It is separate from deployment and isolated service restart.
+- A cold power-on additionally depends on hardware, disk unlock, power restoration, and network
+  association. The successful controlled reboot is not presented as a cold-power guarantee.
+
+The application repository remains self-contained for build, deployment, application restart,
+health, and forward-fix recovery. The neutral repository is optional context for shared-host
+operations.
+
 ## P1 rollout evidence
 
 P1 was deployed from clean commit `15f0a5e343f50cf1dde985d412603dc3860adc43` on August 13,

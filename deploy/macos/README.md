@@ -225,6 +225,11 @@ Future validation, activation, restart, and rollback use the neutral host-infras
 ordinary Treasury installation, release deployment, and restart never edit or restart
 `cloudflared`.
 
+Application restart, shared-tunnel restart, controlled OS reboot, and cold power-on are separate
+recovery events. Treasury tooling owns only the first. The neutral host procedure owns the shared
+tunnel and administration daemons; a controlled reboot verifies the complete host; and cold power
+adds disk, hardware, power, and network preconditions that an application release cannot prove.
+
 `TREASURY_TRUST_CLOUDFLARE_CLIENT_IP=true` is enabled only after the application is reachable through this tunnel and the listener is confirmed on localhost. The transition helper atomically edits that one protected setting, restarts the application, and restores the prior file if public readiness fails.
 
 Cloudflare Web Analytics can inject a browser beacon into proxied HTML. The application prevents this by serving HTML with `Cache-Control: no-transform` and a same-origin Content Security Policy. Browser inspection remains part of the public release gate; routing success alone is insufficient.
