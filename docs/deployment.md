@@ -1,8 +1,8 @@
 # Deployment
 
-**Status:** P0 public and validated; P1 host rollout pending
+**Status:** P0 and P1 public and validated
 
-**Last updated:** 2026-08-12
+**Last updated:** 2026-08-13
 
 ## Runtime topology
 
@@ -98,18 +98,20 @@ HTML responses use a same-origin Content Security Policy and `Cache-Control: no-
 prevent browser runtime injection. Trusted Cloudflare client-address handling is enabled only when
 the origin is confirmed to be reachable exclusively through the tunnel.
 
-## P1 rollout boundary
+## P1 rollout evidence
 
-The repository's `main` branch contains P1, but the public host still requires its schema-transition
-deployment and live batch validation. Schema version 2 is additive and idempotent; however, the old
-P0 binary does not correctly own P1 cleanup after migration. The first P1 rollout is therefore a
-forward-only transition: retain the predecessor for evidence, but respond to a defect with a tested
-forward fix rather than restarting that binary against the upgraded database.
+P1 was deployed from clean commit `15f0a5e343f50cf1dde985d412603dc3860adc43` on August 13,
+2026. The rollout disabled paid starts during activation, applied the additive schema-2 migration,
+verified P0 first, and ran mixed preflight without a provider call before re-enabling extraction.
+Because the earlier P0 binary does not own P1 cleanup correctly after migration, this remains a
+forward-only transition: a defect requires a tested forward fix rather than restarting that binary
+against schema 2.
 
-The rollout keeps paid starts disabled through activation, verifies P0 first, runs P1 preflight
-without a provider call, then uses one explicitly bounded synthetic live batch before ordinary
-starts are re-enabled. Until that gate is completed, public P1 behavior and throughput are not
-claimed as deployed evidence.
+Public validation covered expected-value correction, row-specific image replacement, duplicate
+start idempotency, polling, case detail, CSV export, refresh recovery, and one live batch containing
+a match, known mismatch, and unreadable case. A separate 25-case synthetic batch completed under
+the two-request concurrency ceiling. All 28 processed images were deleted immediately. A controlled
+service restart preserved completed results and created no additional provider attempt.
 
 ## Limitations
 

@@ -1,8 +1,8 @@
 # Evaluation
 
-**Status:** Local fixture program complete through F4; deployed P1 evaluation pending
+**Status:** Local fixture program and deployed P0/P1 evaluation complete
 
-**Last updated:** 2026-08-12
+**Last updated:** 2026-08-13
 
 ## Evidence layers
 
@@ -107,6 +107,25 @@ A current-Chrome run loaded only the same-origin compiled script, stylesheet, an
 with no remote runtime dependency or console warning. Controlled service restart and host reboot
 restored public readiness without changing the durable accounting ledger.
 
+## Deployed P1 evidence
+
+The schema-2 release passed a zero-cost mixed preflight and in-place correction through HTTPS. The
+bounded live batch then completed three independent cases in 8.31 seconds end to end: five matches
+for the clear label, four matches and one mismatch for the known net-contents change, and five
+`Needs review` checks for the unreadable label. Duplicate start, polling, detail, three-row export,
+and refresh recovery passed without an extra job or provider attempt.
+
+An additional 25-case synthetic matching batch completed 25/25 cases with no failure or retry. It
+took 41.71 seconds end to end under the global two-request concurrency ceiling; median case duration
+was 2.41 seconds and the maximum was 6.99 seconds. The export contained 25 rows. Across the P0
+regression and both P1 batches, all 29 D5 provider attempts succeeded and cost an estimated
+$0.012355 under the recorded pricing snapshot.
+
+All 28 processed batch images were deleted immediately. A controlled service restart kept the
+25-case result readable and did not change the attempt count. The two files still present after the
+gate belong to an unstarted synthetic correction draft and remain subject to absolute 24-hour
+expiry.
+
 ## Running the suites
 
 ```bash
@@ -128,6 +147,5 @@ remain local and ignored because they contain diagnostic observations and provid
 
 These results support a bounded synthetic prototype. They do not estimate accuracy on commercial
 labels, prove a stable production latency distribution, demonstrate 200–300-case throughput, or
-establish suitability for protected data. The P1 package lifecycle is fully covered offline, but a
-small deployed live-provider batch and optional capacity-safe 25-case run remain pending after the
-P1 host rollout.
+establish suitability for protected data. The deployed 25-case result demonstrates this configured
+prototype ceiling, not production batch capacity.

@@ -6,7 +6,7 @@ A standalone proof of concept that helps an alcohol-label reviewer compare expec
 
 The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. The P0 application is deployed publicly, and its public smoke, browser-origin, performance, privacy, service-restart, and host-reboot recovery gates have passed.
 
-The P1 batch workflow is implemented and ready for deployment. It includes templates, bounded spreadsheet preflight, recoverable 24-hour drafts, an accessible correction interface, idempotent background processing, bounded progress polling, outcome filters, reusable P0 case detail, refresh recovery, safe terminal CSV export, periodic orphan cleanup, restart reconciliation, and offline integrated regression coverage. The batch workflow uses a dedicated `/batch` page. Its public rollout and bounded deployed live-provider evaluation remain deployment work.
+The P1 batch workflow is implemented and deployed at `/batch`. It includes templates, bounded spreadsheet preflight, recoverable 24-hour drafts, an accessible correction interface, idempotent background processing, bounded progress polling, outcome filters, reusable P0 case detail, refresh recovery, safe terminal CSV export, periodic orphan cleanup, and restart reconciliation. Public preflight, correction, a mixed three-case live batch, a 25-case synthetic batch, processed-image deletion, and restart recovery have passed.
 
 ## Demo workflow
 
