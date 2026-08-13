@@ -28,7 +28,11 @@ The application root contains immutable `releases/<full-commit>` directories and
   [`chranama/web-server-infrastructure`](https://github.com/chranama/web-server-infrastructure),
   and the server uses an explicitly promoted copy in its protected infrastructure runtime.
 - `build-release.sh` validates a clean `main`, runs non-network checks, builds the frontend, and creates a commit-attributed archive and SHA-256 file.
-- `deploy-release.sh` orchestrates a deliberate local build, private transfer, installation, guarded restart, and exact-release verification on `mealcheck-server`.
+- `deploy-release.sh` orchestrates a deliberate local build, private transfer, installation,
+  guarded restart, and exact-release verification through one explicitly selected administration
+  alias.
+- `check-remote-service.sh` checks either accepted SSH alias without paid work and never falls back
+  to the other path automatically.
 - `enable-cloudflare-client-ip.sh` atomically enables the protected trusted-client setting only after local and public checks pass, with failure rollback.
 - `install-release.sh` verifies and installs that archive, creates an Intel-native locked Python 3.12 environment, and atomically activates it without restarting the service.
 - `install-service.sh` validates the active release and protected configuration, then installs and loads the one-time system LaunchDaemon without replacing an existing service.
@@ -66,9 +70,24 @@ After confirming that no label review is active, run this from the original `mai
 deploy/macos/deploy-release.sh --confirm-no-active-reviews
 ```
 
+The primary alias is the default. To deliberately use the Access-protected recovery path instead:
+
+```bash
+deploy/macos/deploy-release.sh \
+  --confirm-no-active-reviews \
+  --remote-host mealcheck-server-cf
+```
+
+Only `mealcheck-server` and `mealcheck-server-cf` are accepted. The orchestrator prints the
+selected alias before connecting, transferring, or changing remote state. It never changes paths
+automatically. If a connection fails before remote staging is created, confirm that the first
+attempt made no remote change, run the read-only checker through the other alias, and then start a
+new deliberate deployment command. If failure occurs after staging or activation begins, inspect
+the reported state through the independent path; do not rerun automatically.
+
 The orchestrator fetches `origin/main` and refuses a dirty, unpushed, stale, or non-`main`
 checkout. It verifies the current server release, runs the complete release build in a fresh local
-directory, creates a private staging directory on `mealcheck-server`, transfers the archive,
+directory, creates a private staging directory through the selected alias, transfers the archive,
 checksum, and installer, activates the immutable release, and invokes the existing guarded
 restart. It succeeds only when the server reports the exact local commit and passes localhost
 health and readiness checks. Local and remote staging files are removed when the command exits.
@@ -143,6 +162,19 @@ Neither health nor readiness makes a provider call:
 deploy/macos/check-service.sh local
 deploy/macos/check-service.sh public
 ```
+
+Check local SSH configuration without connecting, or repeat the same remote health check through
+one selected path:
+
+```bash
+deploy/macos/check-remote-service.sh mealcheck-server
+deploy/macos/check-remote-service.sh mealcheck-server-cf
+deploy/macos/check-remote-service.sh --connect mealcheck-server
+deploy/macos/check-remote-service.sh --connect mealcheck-server-cf
+```
+
+The Cloudflare command uses an existing interactive Access session. No Access token is stored in
+the repository or passed to unattended CI.
 
 The live P0 smoke test can make one provider attempt plus the one bounded eligible retry. It refuses to run without explicit acknowledgment:
 

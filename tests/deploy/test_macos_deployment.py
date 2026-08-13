@@ -19,6 +19,7 @@ SHELL_ASSETS = [
     "activate-cloudflare-route.sh",
     "build-release.sh",
     "check-service.sh",
+    "check-remote-service.sh",
     "deploy-release.sh",
     "enable-cloudflare-client-ip.sh",
     "install-release.sh",
@@ -106,6 +107,20 @@ def test_manual_deployment_orchestrator_is_deliberate_and_commit_attributed() ->
     assert unconfirmed.returncode != 0
     assert "usage: deploy-release.sh --confirm-no-active-reviews" in unconfirmed.stderr
 
+    unsupported = subprocess.run(
+        [
+            str(path),
+            "--confirm-no-active-reviews",
+            "--remote-host",
+            "untrusted-host",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert unsupported.returncode != 0
+    assert "unsupported remote host: untrusted-host" in unsupported.stderr
+
     assert '"$(git branch --show-current)" = "main"' in content
     assert "git status --porcelain --untracked-files=all" in content
     assert '"$upstream" = "origin/main"' in content
@@ -116,6 +131,10 @@ def test_manual_deployment_orchestrator_is_deliberate_and_commit_attributed() ->
     assert 'scp "$archive" "$checksum" "$installer"' in content
     assert 'install-release.sh" \\' in content
     assert "--disable-live-during-deploy" in content
+    assert "--remote-host" in content
+    assert "mealcheck-server|mealcheck-server-cf" in content
+    assert "Selected deployment alias:" in content
+    assert "No automatic fallback will be attempted" in content
     assert 'set-live-extraction.sh" \\' in content
     assert "--disable --confirm-no-active-reviews" in content
     assert 'restart-service.sh" \\' in content
@@ -126,6 +145,62 @@ def test_manual_deployment_orchestrator_is_deliberate_and_commit_attributed() ->
     assert "Automatic rollback was not attempted" in content
     assert "git pull" not in content
     assert "git clone" not in content
+
+
+def test_remote_service_checker_is_explicit_read_only_and_has_no_fallback(
+    tmp_path: Path,
+) -> None:
+    path = DEPLOY_ROOT / "check-remote-service.sh"
+    calls = tmp_path / "calls"
+    fake_ssh = tmp_path / "ssh"
+    fake_ssh.write_text(
+        "#!/bin/bash\n"
+        "printf '%s\\n' \"$*\" >> \"$TREASURY_TEST_CALLS\"\n"
+        "if [ \"${1:-}\" = '-G' ]; then\n"
+        "  printf 'user chranama-server\\n'\n"
+        "  printf 'hostname example.invalid\\n'\n"
+        "  printf 'hostkeyalias trusted-origin\\n'\n"
+        "  exit 0\n"
+        "fi\n"
+        "exit \"${TREASURY_TEST_SSH_EXIT:-0}\"\n",
+        encoding="utf-8",
+    )
+    fake_ssh.chmod(0o700)
+    env = os.environ | {
+        "TREASURY_REMOTE_SSH_BIN": str(fake_ssh),
+        "TREASURY_TEST_CALLS": str(calls),
+    }
+
+    configured = subprocess.run(
+        [str(path), "mealcheck-server-cf"],
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert configured.returncode == 0
+    assert "Configuration-only check passed" in configured.stdout
+
+    calls.write_text("", encoding="utf-8")
+    failed = subprocess.run(
+        [str(path), "--connect", "mealcheck-server"],
+        env=env | {"TREASURY_TEST_SSH_EXIT": "23"},
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert failed.returncode == 23
+    attempted = calls.read_text(encoding="utf-8")
+    assert "mealcheck-server-cf" not in attempted
+
+    unsupported = subprocess.run(
+        [str(path), "unsupported-host"],
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert unsupported.returncode != 0
 
 
 def test_live_extraction_switch_is_confirmation_gated_and_reversible() -> None:

@@ -71,14 +71,34 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
-[ "${1:-}" = "--confirm-no-active-reviews" ] || {
-  fail "usage: deploy-release.sh --confirm-no-active-reviews [--disable-live-during-deploy]"
-}
-case "$#:${2:-}" in
-  1:) ;;
-  2:--disable-live-during-deploy) disable_live_during_deploy=1 ;;
-  *) fail "usage: deploy-release.sh --confirm-no-active-reviews [--disable-live-during-deploy]" ;;
+usage="usage: deploy-release.sh --confirm-no-active-reviews [--disable-live-during-deploy] [--remote-host mealcheck-server|mealcheck-server-cf]"
+confirmed_no_active_reviews=0
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --confirm-no-active-reviews)
+      confirmed_no_active_reviews=1
+      shift
+      ;;
+    --disable-live-during-deploy)
+      disable_live_during_deploy=1
+      shift
+      ;;
+    --remote-host)
+      [ "$#" -ge 2 ] || fail "$usage"
+      REMOTE_HOST=$2
+      shift 2
+      ;;
+    *) fail "$usage" ;;
+  esac
+done
+[ "$confirmed_no_active_reviews" -eq 1 ] || fail "$usage"
+case "$REMOTE_HOST" in
+  mealcheck-server|mealcheck-server-cf) ;;
+  *) fail "unsupported remote host: $REMOTE_HOST" ;;
 esac
+
+printf 'Selected deployment alias: %s\n' "$REMOTE_HOST"
+printf 'No automatic fallback will be attempted after remote work begins.\n'
 
 for command_name in git ssh scp; do
   command -v "$command_name" >/dev/null 2>&1 || fail "missing required command: $command_name"

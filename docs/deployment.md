@@ -70,6 +70,12 @@ release operation:
 6. ask launchd to replace the old process; and
 7. verify the exact commit, listener, health, and readiness.
 
+The operator selects only one of two accepted SSH aliases for the entire operation. The default
+`mealcheck-server` alias uses the system-Tailscale path; `mealcheck-server-cf` uses the
+Access-protected recovery path. The orchestrator prints the selected alias and never falls back
+automatically after remote work begins. Both paths present the same previously verified origin
+host key. Read-only health can be deliberately repeated through either path without deploying.
+
 Pushing `main` does not deploy it. This avoids an unattended paid endpoint update and keeps every
 running build attributable to one explicit release decision. Exact operator commands and script
 responsibilities are in [`deploy/macos/README.md`](../deploy/macos/README.md).
@@ -86,11 +92,11 @@ service logs rotate at 1 MiB with five archives; a separate startup log rotates 
 archives. Files inherit private permissions. The SQLite ledger—not logs—is authoritative for
 attempt, timing, token, cost, and outcome metadata.
 
-The public P0 service has passed local and HTTPS health/readiness checks, controlled service restart,
-host reboot recovery, same-origin browser inspection, and live matching, mismatch, and unreadable
-smoke cases. After reboot, public service recovery succeeded even though the Tailscale management
-session did not return until local user login; that affects remote administration, not public
-availability.
+The public P0 service has passed local and HTTPS health/readiness checks, controlled service
+restart, host reboot recovery, same-origin browser inspection, and live matching, mismatch, and
+unreadable smoke cases. The earlier GUI Tailscale client required local login after reboot; host
+administration now uses a system-level `tailscaled` service that starts independently of GUI
+login, with Cloudflare Access SSH retained as the separate recovery path.
 
 ## Network boundary
 
