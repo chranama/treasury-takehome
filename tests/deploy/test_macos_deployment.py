@@ -153,31 +153,26 @@ def test_live_extraction_switch_is_confirmation_gated_and_reversible() -> None:
     assert "sudo" not in content
 
 
-def test_cloudflare_route_activation_preserves_mealcheck_and_has_rollback() -> None:
+def test_cloudflare_route_activation_is_retired_to_neutral_host_owner() -> None:
     path = DEPLOY_ROOT / "activate-cloudflare-route.sh"
     content = path.read_text(encoding="utf-8")
 
-    unconfirmed = subprocess.run(
+    retired = subprocess.run(
         [str(path)],
         check=False,
         capture_output=True,
         text=True,
     )
-    assert unconfirmed.returncode != 0
-    assert "usage: activate-cloudflare-route.sh" in unconfirmed.stderr
+    assert retired.returncode == 64
+    assert "is retired" in retired.stderr
+    assert "https://github.com/chranama/web-server-infrastructure" in retired.stderr
+    assert "/Users/chranama-server/web-server-infrastructure-runtime/installed/" in retired.stderr
 
-    assert '"${1:-}" = "--confirm-shared-tunnel-change"' in content
-    assert 'MEALCHECK_HOST="api.mealcheck.dev"' in content
-    assert 'TREASURY_HOST="label-review.mealcheck.dev"' in content
-    assert "service: http://127.0.0.1:8080" in content
-    assert "service: http://127.0.0.1:8081" in content
-    assert 'cloudflared tunnel --config "$CONFIG" ingress validate' in content
-    assert 'cloudflared tunnel --config "$candidate" ingress validate' in content
-    assert "baseline_status=$(" in content
-    assert '/bin/kill -TERM "$old_pid"' in content
-    assert 'check-service.sh" public' in content
-    assert 'chmod 600 "$backup"' in content
-    assert 'cp -p "$backup" "$CONFIG.rollback"' in content
+    assert "Treasury no longer owns or" in content
+    assert "No file, process, route, or service was changed." in content
+    assert "cloudflared tunnel" not in content
+    assert "launchctl" not in content
+    assert "mealcheck-api.yml" not in content
     assert "sudo" not in content
 
 

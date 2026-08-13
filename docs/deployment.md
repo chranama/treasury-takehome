@@ -23,6 +23,11 @@ flowchart LR
 The `mealcheck.dev` domain is reused, but `label-review.mealcheck.dev` has its own route. The
 Treasury process, port, releases, database, images, logs, and configuration are separate from
 MealCheck. Only the existing cloudflared process and its additive ingress configuration are shared.
+That shared process and configuration are owned by the server's neutral host-infrastructure
+implementation, not by either application release. The reusable non-secret source is published in
+[`chranama/web-server-infrastructure`](https://github.com/chranama/web-server-infrastructure) as
+optional deployment context. Treasury deployment verifies its public hostname but does not edit or
+restart `cloudflared`.
 
 This shape was chosen because it was already available, inexpensive, and adequate for a short-lived
 single-process demo. Docker would add another runtime and memory cost without improving isolation
