@@ -1,6 +1,6 @@
 # Fixture Coverage and Manifest Contract
 
-**Status:** F0-F3 complete; reviewer demo fixtures remain scheduled for F4
+**Status:** F0-F4 complete; deployed evaluation remains scheduled for F5
 
 **Last updated:** 2026-08-12
 
@@ -36,8 +36,8 @@ fixture milestone, not evidence supplied by a different layer.
 | A8-I | Unsupported, empty, truncated, and corrupt image intake | Existing: generated image-intake and API tests | `image_intake` | `image_intake_security` | `image_intake` | Safe invalid-input response; no provider attempt; five checks are not evaluated if represented as a review result |
 
 The inventory covers all eight categories in the specification. The `hosted-visual-v2` revision
-now supplies the F2 visual variants using the F1 renderer. F3 owns P1 package coverage and F4 owns
-evaluator-downloadable artifacts.
+supplies the F2 visual variants using the F1 renderer, `p1-packages-v1` owns P1 package coverage,
+and `reviewer-demo-v1` owns the evaluator-downloadable artifacts.
 
 ## Suite ownership
 
@@ -83,6 +83,11 @@ P1 package cases must include the preflight layer, generator revision and varian
 spreadsheet formats, row and upload filenames, expected issue codes and counts, and hashes for every
 generated spreadsheet and image. Lifecycle cases additionally record selection, terminal counts,
 outcomes, concurrency, attempts, cleanup, replay, or export properties relevant to that case.
+
+Reviewer demo cases must include their workflow, scenario, public relative directory, source
+revision and case IDs, step-by-step instructions, and artifact hashes. P0 demos additionally carry
+the exact expected application and review result; P1 example packages carry their preflight issue
+and readiness expectations.
 
 Rendered cases cannot omit their artwork parameters or artifact hashes. Extra fields, duplicate
 case IDs, duplicate membership values, owner/family mismatches, incomplete layer-specific
@@ -194,3 +199,23 @@ concurrency two; cleanup deletes processed images and later expires unselected c
 preserves completed work, interrupts uncertain work, and makes no replay attempt. Existing export
 and browser tests cover formula neutralization, progress, filtering, detail, download, and a
 keyboard-usable 25-row result set. All F3 gates are offline and make no provider request.
+
+## F4 reviewer demo bundle
+
+The committed `reviewer-demo-v1` manifest defines six reviewer scenarios and 11 downloadable
+artifacts. It includes a matching P0 label, a material net-contents mismatch, a deliberately
+unreadable label, blank CSV and XLSX templates, a two-case valid P1 package, and a mixed package
+with one ready and one repairable row.
+
+The generated files live under `frontend/public/demo`, so Vite copies them into the compiled site
+and the existing same-origin FastAPI static-file service publishes them without a new API or data
+store. Both the interface and README state the exact P0 inputs, expected outcomes, P1 file
+selections, expected preflight counts, and mixed-case corrections. P1 examples remain separate
+spreadsheet and image files rather than ZIP archives, matching the accepted product contract.
+
+Unlike the broader generated suites, these binaries are committed because the exact downloadable
+files are the reviewer-facing product artifact. `evals.demo_bundle` reproduces every byte from the
+F2 visual renderer and P1 template generator. Offline regressions compare a fresh generation with
+the committed tree, verify all manifest hashes and image decodability, and run both P1 packages
+through the real preflight service. Frontend and browser tests verify that the instructions and
+static URLs remain present and usable.

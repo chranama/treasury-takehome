@@ -71,12 +71,37 @@ test('provides a visible keyboard focus path into the form', async ({ page }) =>
   await page.keyboard.press('Tab')
   await expect(page.getByRole('link', { name: 'Batch review' })).toBeFocused()
   await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Download matching label' })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Download mismatch label' })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Download unreadable label' })).toBeFocused()
+  await page.keyboard.press('Tab')
   await expect(page.getByLabel('Expected brand name')).toBeFocused()
 
   const outlineStyle = await page.getByLabel('Expected brand name').evaluate((element) =>
     getComputedStyle(element).outlineStyle,
   )
   expect(outlineStyle).toBe('solid')
+})
+
+test('serves the guided P0 and P1 reviewer demo files', async ({ page, request }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Try a supplied label' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Download matching label' })).toBeVisible()
+
+  const matchingLabel = await request.get('/demo/p0/matching-label.png')
+  expect(matchingLabel.ok()).toBe(true)
+  expect(matchingLabel.headers()['content-type']).toContain('image/png')
+
+  await page.goto('/batch')
+  await expect(page.getByRole('heading', { name: 'Try a supplied batch' })).toBeVisible()
+  await expect(page.getByText(/2 ready, 0 corrections/i)).toBeVisible()
+
+  const validSpreadsheet = await request.get('/demo/p1/valid/applications.csv')
+  expect(validSpreadsheet.ok()).toBe(true)
+  expect(validSpreadsheet.headers()['content-type']).toContain('text/csv')
+  expect(await validSpreadsheet.text()).toContain('DEMO-MISMATCH')
 })
 
 test('preflights a valid package and recovers it after refresh', async ({ page }) => {

@@ -1,0 +1,315 @@
+{
+  "schema_version": 2,
+  "revision": "reviewer-demo-v1",
+  "owner": "demo_bundle",
+  "purpose": "Provide minimal, attributable P0 and P1 files that a reviewer can use without inventing application data or expected outcomes.",
+  "cases": [
+    {
+      "id": "p0-matching-label",
+      "purpose": "Establish the clear front/back five-check baseline.",
+      "families": [
+        "reviewer_demo"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "browser"
+      ],
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "expected_review": {
+        "outcome": "all_checks_passed",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "match",
+          "government_warning": "match"
+        }
+      },
+      "reviewer_demo": {
+        "generator": "reviewer-demo",
+        "version": "1",
+        "workflow": "p0_single_review",
+        "scenario": "matching_label",
+        "directory": "p0",
+        "source_revision": "hosted-visual-v2",
+        "source_case_ids": [
+          "clear-composite"
+        ],
+        "instructions": [
+          "Enter OLD TOM, Kentucky Straight Bourbon Whiskey, 45 ABV, and 750 mL.",
+          "Upload matching-label.png and select Review label.",
+          "Expect All checks passed with five matching checks."
+        ]
+      },
+      "artifacts": [
+        {
+          "filename": "matching-label.png",
+          "media_type": "image/png",
+          "sha256": "250a1769344d64c093a855b73c3b3b9bfce5da6250880a1e4d94cb02b5a36b90"
+        }
+      ]
+    },
+    {
+      "id": "p0-material-mismatch",
+      "purpose": "Preserve a material visible quantity difference.",
+      "families": [
+        "reviewer_demo"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "browser"
+      ],
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "match",
+          "class_type": "match",
+          "alcohol_content": "match",
+          "net_contents": "mismatch",
+          "government_warning": "match"
+        }
+      },
+      "reviewer_demo": {
+        "generator": "reviewer-demo",
+        "version": "1",
+        "workflow": "p0_single_review",
+        "scenario": "material_mismatch",
+        "directory": "p0",
+        "source_revision": "hosted-visual-v2",
+        "source_case_ids": [
+          "material-net-mismatch"
+        ],
+        "instructions": [
+          "Enter OLD TOM, Kentucky Straight Bourbon Whiskey, 45 ABV, and 750 mL.",
+          "Upload material-net-mismatch.png and select Review label.",
+          "Expect Needs review because the artwork says 700 mL."
+        ]
+      },
+      "artifacts": [
+        {
+          "filename": "material-net-mismatch.png",
+          "media_type": "image/png",
+          "sha256": "40f36216f606f46bf84b0d0efcd4413ade163c0e3214bee3fc870f0e16bdb1ae"
+        }
+      ]
+    },
+    {
+      "id": "p0-unreadable-label",
+      "purpose": "Return uncertainty without fabricated candidates under combined degradation.",
+      "families": [
+        "reviewer_demo"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "browser"
+      ],
+      "expected_application": {
+        "brand_name": "OLD TOM",
+        "class_type": "Kentucky Straight Bourbon Whiskey",
+        "abv": "45",
+        "net_contents": {
+          "value": "750",
+          "unit": "mL"
+        }
+      },
+      "expected_review": {
+        "outcome": "needs_review",
+        "checks": {
+          "brand_name": "needs_review",
+          "class_type": "needs_review",
+          "alcohol_content": "needs_review",
+          "net_contents": "needs_review",
+          "government_warning": "needs_review"
+        }
+      },
+      "reviewer_demo": {
+        "generator": "reviewer-demo",
+        "version": "1",
+        "workflow": "p0_single_review",
+        "scenario": "unreadable_label",
+        "directory": "p0",
+        "source_revision": "hosted-visual-v2",
+        "source_case_ids": [
+          "degraded-unreadable"
+        ],
+        "instructions": [
+          "Enter OLD TOM, Kentucky Straight Bourbon Whiskey, 45 ABV, and 750 mL.",
+          "Upload unreadable-label.png and select Review label.",
+          "Expect Needs review rather than invented label values."
+        ]
+      },
+      "artifacts": [
+        {
+          "filename": "unreadable-label.png",
+          "media_type": "image/png",
+          "sha256": "6999d326c773b1d04000a2315cce7cff7e26ea39b649e664180fb35c212ec0d9"
+        }
+      ]
+    },
+    {
+      "id": "blank-batch-templates",
+      "purpose": "Provide both accepted blank spreadsheet formats for reviewer use.",
+      "families": [
+        "reviewer_demo"
+      ],
+      "layers": [
+        "manifest_schema",
+        "browser"
+      ],
+      "reviewer_demo": {
+        "generator": "reviewer-demo",
+        "version": "1",
+        "workflow": "p1_batch_review",
+        "scenario": "blank_templates",
+        "directory": "templates",
+        "source_revision": "p1-packages-v1",
+        "source_case_ids": [],
+        "instructions": [
+          "Download either template and keep its column names unchanged.",
+          "Complete one row per application and select the referenced images separately."
+        ]
+      },
+      "artifacts": [
+        {
+          "filename": "label-review-batch.csv",
+          "media_type": "text/csv",
+          "sha256": "4028fcffada93815880fa46c129a237c5398847614c8cc6f73a968848804b5b4"
+        },
+        {
+          "filename": "label-review-batch.xlsx",
+          "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "sha256": "06b582463600a8a9d1aac16fd3506a6aeeadf84287677557d7eb10ceec5c05f7"
+        }
+      ]
+    },
+    {
+      "id": "p1-valid-package",
+      "purpose": "Provide a two-case package that passes preflight and demonstrates independent outcomes.",
+      "families": [
+        "reviewer_demo"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "browser",
+        "p1_preflight_batch"
+      ],
+      "expected_preflight": {
+        "issue_codes": [],
+        "ready_case_count": 2,
+        "correction_case_count": 0
+      },
+      "reviewer_demo": {
+        "generator": "reviewer-demo",
+        "version": "1",
+        "workflow": "p1_batch_review",
+        "scenario": "valid_batch",
+        "directory": "p1/valid",
+        "source_revision": "hosted-visual-v2",
+        "source_case_ids": [
+          "clear-composite",
+          "material-net-mismatch"
+        ],
+        "instructions": [
+          "Select applications.csv as the spreadsheet and both PNG files as label images.",
+          "Expect two ready cases and no corrections after Check batch.",
+          "When processed, expect DEMO-PASS to pass and DEMO-MISMATCH to need review for 700 mL."
+        ]
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "1e8105942c297570da3e686178d8fe969900eec80aeb7826cca7c4df57b2b911"
+        },
+        {
+          "filename": "matching-label.png",
+          "media_type": "image/png",
+          "sha256": "250a1769344d64c093a855b73c3b3b9bfce5da6250880a1e4d94cb02b5a36b90"
+        },
+        {
+          "filename": "material-net-mismatch.png",
+          "media_type": "image/png",
+          "sha256": "40f36216f606f46bf84b0d0efcd4413ade163c0e3214bee3fc870f0e16bdb1ae"
+        }
+      ]
+    },
+    {
+      "id": "p1-mixed-preflight",
+      "purpose": "Provide one ready row and one repairable row with an intentionally unreferenced replacement image.",
+      "families": [
+        "reviewer_demo"
+      ],
+      "layers": [
+        "manifest_schema",
+        "deterministic_rendering",
+        "browser",
+        "p1_preflight_batch"
+      ],
+      "expected_preflight": {
+        "issue_codes": [
+          "missing_image",
+          "unreferenced_image",
+          "invalid_abv"
+        ],
+        "ready_case_count": 1,
+        "correction_case_count": 1,
+        "ready_after_correction": 2
+      },
+      "reviewer_demo": {
+        "generator": "reviewer-demo",
+        "version": "1",
+        "workflow": "p1_batch_review",
+        "scenario": "mixed_preflight",
+        "directory": "p1/mixed-errors",
+        "source_revision": "hosted-visual-v2",
+        "source_case_ids": [
+          "clear-composite"
+        ],
+        "instructions": [
+          "Select applications.csv as the spreadsheet and both PNG files as label images.",
+          "Expect one ready case, one case needing correction, and an unreferenced-image warning.",
+          "Change DEMO-FIX ABV to 45 and replace its missing image with replacement-label.png.",
+          "Expect two ready cases after both corrections."
+        ]
+      },
+      "artifacts": [
+        {
+          "filename": "applications.csv",
+          "media_type": "text/csv",
+          "sha256": "750725a4dcc59202b095891e16859de6c3c71d6285b889a0fedb70fc2b88738e"
+        },
+        {
+          "filename": "matching-label.png",
+          "media_type": "image/png",
+          "sha256": "250a1769344d64c093a855b73c3b3b9bfce5da6250880a1e4d94cb02b5a36b90"
+        },
+        {
+          "filename": "replacement-label.png",
+          "media_type": "image/png",
+          "sha256": "250a1769344d64c093a855b73c3b3b9bfce5da6250880a1e4d94cb02b5a36b90"
+        }
+      ]
+    }
+  ]
+}

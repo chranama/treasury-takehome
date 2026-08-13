@@ -28,6 +28,39 @@ P1 is a bounded prototype workflow, not a production batch-processing system. It
 
 The HTTPS deployment provides the working browser-based prototype without requiring local installation or access to this repository.
 
+## Reviewer demo files
+
+The interface links to a small synthetic demo bundle, so a reviewer does not need to create label
+artwork or invent expected values.
+
+For each P0 image, enter the same expected application values: brand `OLD TOM`, class/type
+`Kentucky Straight Bourbon Whiskey`, ABV `45`, and net contents `750 mL`.
+
+- [Matching label](frontend/public/demo/p0/matching-label.png): expect **All checks passed**.
+- [Material net-contents mismatch](frontend/public/demo/p0/material-net-mismatch.png): expect
+  **Needs review** because the artwork says `700 mL`.
+- [Unreadable label](frontend/public/demo/p0/unreadable-label.png): expect **Needs review** rather
+  than invented values.
+
+The P1 page accepts one spreadsheet and separately selected images; do not create a ZIP file.
+
+- Blank starting points: [XLSX template](frontend/public/demo/templates/label-review-batch.xlsx)
+  and [CSV template](frontend/public/demo/templates/label-review-batch.csv).
+- Valid two-case package: select [applications.csv](frontend/public/demo/p1/valid/applications.csv),
+  [matching-label.png](frontend/public/demo/p1/valid/matching-label.png), and
+  [material-net-mismatch.png](frontend/public/demo/p1/valid/material-net-mismatch.png). Expect two
+  ready cases, then one pass and one `700 mL` mismatch when processed.
+- Mixed preflight package: select
+  [applications.csv](frontend/public/demo/p1/mixed-errors/applications.csv),
+  [matching-label.png](frontend/public/demo/p1/mixed-errors/matching-label.png), and
+  [replacement-label.png](frontend/public/demo/p1/mixed-errors/replacement-label.png). Expect one
+  ready case, one case needing correction, and an unreferenced-image warning. Change `DEMO-FIX`
+  ABV to `45`, then replace its missing image with `replacement-label.png` to make both rows ready.
+
+All files are synthetic and contain no applicant data. Their source revisions, expected outcomes,
+and SHA-256 hashes are recorded in `fixtures/reviewer-demo-v1.json`; regenerate them with
+`uv run python -m evals.demo_bundle`.
+
 ## Local setup and run instructions
 
 Prerequisites:

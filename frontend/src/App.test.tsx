@@ -102,6 +102,28 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Review findings appear here' })).toBeInTheDocument()
   })
 
+  it('provides three P0 demo files with one explicit set of expected inputs', () => {
+    render(<App />)
+
+    const demo = screen.getByRole('region', { name: 'Try a supplied label' })
+    expect(within(demo).getByText('OLD TOM')).toBeInTheDocument()
+    expect(within(demo).getByText('Kentucky Straight Bourbon Whiskey')).toBeInTheDocument()
+    expect(within(demo).getByText('45')).toBeInTheDocument()
+    expect(within(demo).getByText('750 mL')).toBeInTheDocument()
+    expect(within(demo).getByRole('link', { name: 'Download matching label' })).toHaveAttribute(
+      'href',
+      '/demo/p0/matching-label.png',
+    )
+    expect(within(demo).getByRole('link', { name: 'Download mismatch label' })).toHaveAttribute(
+      'href',
+      '/demo/p0/material-net-mismatch.png',
+    )
+    expect(within(demo).getByRole('link', { name: 'Download unreadable label' })).toHaveAttribute(
+      'href',
+      '/demo/p0/unreadable-label.png',
+    )
+  })
+
   it('serves batch review as a separate page with navigation back to single review', () => {
     window.history.replaceState({}, '', '/batch')
     render(<App />)
@@ -110,6 +132,25 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'Single label' })).toHaveAttribute('href', '/')
     expect(screen.getByRole('heading', { name: 'Prepare a batch package' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Expected brand name')).not.toBeInTheDocument()
+  })
+
+  it('provides complete valid and mixed P1 packages with correction guidance', () => {
+    window.history.replaceState({}, '', '/batch')
+    render(<App />)
+
+    const demo = screen.getByRole('region', { name: 'Try a supplied batch' })
+    expect(within(demo).getByText(/2 ready, 0 corrections/i)).toBeInTheDocument()
+    expect(within(demo).getByText(/1 ready, 1 correction/i)).toBeInTheDocument()
+    expect(within(demo).getByText(/change DEMO-FIX ABV to 45/i)).toBeInTheDocument()
+    expect(within(demo).getAllByRole('link')).toHaveLength(8)
+    expect(within(demo).getByRole('link', { name: 'Download valid spreadsheet' })).toHaveAttribute(
+      'href',
+      '/demo/p1/valid/applications.csv',
+    )
+    expect(within(demo).getByRole('link', { name: 'Download mixed spreadsheet' })).toHaveAttribute(
+      'href',
+      '/demo/p1/mixed-errors/applications.csv',
+    )
   })
 
   it('validates required values before making a request', () => {

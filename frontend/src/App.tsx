@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { BatchWorkflow } from './BatchWorkflow'
+import { DemoExamples } from './DemoExamples'
 import { submitReview, ReviewRequestError } from './reviewApi'
 import { ReviewForm } from './ReviewForm'
 import {
@@ -81,6 +82,8 @@ function App() {
             Batch review
           </a>
         </nav>
+
+        <DemoExamples batch={batchPage} />
 
         {batchPage ? (
           <BatchWorkflow />

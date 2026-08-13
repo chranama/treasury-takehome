@@ -206,6 +206,121 @@ h1 {
   color: var(--navy-dark);
 }
 
+.demo-panel {
+  margin-bottom: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border: 1px solid #b8ccd8;
+  border-top: 4px solid var(--blue);
+  border-radius: 0.75rem;
+  background: #f9fcfd;
+  box-shadow: 0 0.5rem 1.5rem rgb(20 44 60 / 6%);
+}
+
+.demo-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.demo-heading h2 {
+  margin: 0;
+  color: var(--navy-dark);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.45rem, 3vw, 1.9rem);
+}
+
+.demo-heading > p {
+  max-width: 35rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.demo-expected {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-left: 4px solid var(--gold);
+  border-radius: 0.35rem;
+  background: #fff8e9;
+}
+
+.demo-expected > strong {
+  color: var(--navy-dark);
+  font-size: 0.88rem;
+}
+
+.demo-expected dl {
+  display: grid;
+  margin: 0.65rem 0 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.demo-expected dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.demo-expected dd {
+  margin: 0.2rem 0 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.demo-card-grid {
+  display: grid;
+  margin-top: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.demo-card {
+  display: flex;
+  min-width: 0;
+  padding: 1rem;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: white;
+}
+
+.demo-card h3 {
+  margin: 0;
+  color: var(--navy-dark);
+  font-size: 1rem;
+}
+
+.demo-card p {
+  margin: 0.45rem 0 0.8rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.demo-download {
+  color: var(--blue);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.demo-links {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.demo-card .demo-fix {
+  margin: 0.9rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  color: #405263;
+}
+
 .batch-workflow,
 .batch-draft {
   display: grid;
@@ -1531,6 +1646,20 @@ footer p {
 }
 
 @media (max-width: 58rem) {
+  .demo-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .demo-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .demo-expected dl {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .workflow-layout {
     grid-template-columns: 1fr;
   }
@@ -1584,7 +1713,8 @@ footer p {
   .value-comparison,
   .normalized-values,
   .batch-counts,
-  .batch-expected-values {
+  .batch-expected-values,
+  .demo-expected dl {
     grid-template-columns: 1fr;
   }
 

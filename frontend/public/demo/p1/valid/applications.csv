@@ -1,0 +1,3 @@
+Application ID,Label Image Filename,Expected Brand,Expected Class/Type,Expected ABV,Expected Net Contents
+DEMO-PASS,matching-label.png,OLD TOM,Kentucky Straight Bourbon Whiskey,45,750 mL
+DEMO-MISMATCH,material-net-mismatch.png,OLD TOM,Kentucky Straight Bourbon Whiskey,45,750 mL

@@ -108,6 +108,20 @@ class BatchSelection(StrEnum):
     READY_CASES_ONLY = "ready_cases_only"
 
 
+class DemoWorkflow(StrEnum):
+    P0_SINGLE_REVIEW = "p0_single_review"
+    P1_BATCH_REVIEW = "p1_batch_review"
+
+
+class DemoScenario(StrEnum):
+    MATCHING_LABEL = "matching_label"
+    MATERIAL_MISMATCH = "material_mismatch"
+    UNREADABLE_LABEL = "unreadable_label"
+    BLANK_TEMPLATES = "blank_templates"
+    VALID_BATCH = "valid_batch"
+    MIXED_PREFLIGHT = "mixed_preflight"
+
+
 class RendererSpec(ManifestModel):
     id: Annotated[str, Field(min_length=1, max_length=100)]
     version: Annotated[str, Field(min_length=1, max_length=50)]
@@ -279,6 +293,47 @@ class BatchLifecycleExpectation(ManifestModel):
         return values
 
 
+class ReviewerDemoSpec(ManifestModel):
+    generator: Literal["reviewer-demo"]
+    version: Literal["1"]
+    workflow: DemoWorkflow
+    scenario: DemoScenario
+    directory: Annotated[str, Field(min_length=1, max_length=255)]
+    source_revision: Annotated[str, Field(min_length=1, max_length=100)]
+    source_case_ids: list[str]
+    instructions: Annotated[list[str], Field(min_length=1)]
+
+    @field_validator("directory")
+    @classmethod
+    def require_relative_directory(cls, value: str) -> str:
+        path = Path(value)
+        invalid = (
+            path.is_absolute()
+            or ".." in path.parts
+            or path.as_posix() != value
+            or value in {".", ""}
+        )
+        if invalid:
+            raise ValueError("reviewer demo directory must be a normalized relative path")
+        return value
+
+    @field_validator("source_revision")
+    @classmethod
+    def require_stable_source_revision(cls, value: str) -> str:
+        if not CASE_ID_PATTERN.fullmatch(value):
+            raise ValueError("reviewer demo source revision must be lowercase and hyphenated")
+        return value
+
+    @field_validator("source_case_ids", "instructions")
+    @classmethod
+    def require_unique_nonblank_values(cls, values: list[str]) -> list[str]:
+        if any(not value.strip() for value in values):
+            raise ValueError("reviewer demo values must not be blank")
+        if len(values) != len(set(values)):
+            raise ValueError("reviewer demo values must be unique")
+        return values
+
+
 AllowedCheckStatuses = Annotated[list[CheckStatus], Field(min_length=1)]
 ExpectedCheckStatus = CheckStatus | AllowedCheckStatuses
 
@@ -339,6 +394,7 @@ class EvaluationCaseV2(ManifestModel):
     batch_package: BatchPackageSpec | None = None
     expected_preflight: BatchPreflightExpectation | None = None
     expected_lifecycle: BatchLifecycleExpectation | None = None
+    reviewer_demo: ReviewerDemoSpec | None = None
     artifacts: list[ArtifactExpectation] = Field(default_factory=list)
 
     @field_validator("id")
@@ -397,6 +453,25 @@ class EvaluationCaseV2(ManifestModel):
                 raise ValueError("P1 batch cases require " + ", ".join(sorted(missing)))
             if EvaluationLayer.P1_PREFLIGHT_BATCH not in self.layers:
                 raise ValueError("P1 batch cases must include the P1 preflight layer")
+
+        if FixtureFamily.REVIEWER_DEMO in self.families:
+            if self.reviewer_demo is None or not self.artifacts:
+                raise ValueError("reviewer demo cases require reviewer metadata and artifacts")
+            if EvaluationLayer.BROWSER not in self.layers:
+                raise ValueError("reviewer demo cases must include the browser layer")
+            if self.reviewer_demo.workflow == DemoWorkflow.P0_SINGLE_REVIEW and (
+                self.expected_application is None or self.expected_review is None
+            ):
+                raise ValueError("P0 reviewer demos require expected application and review data")
+            if (
+                self.reviewer_demo.scenario
+                in {
+                    DemoScenario.VALID_BATCH,
+                    DemoScenario.MIXED_PREFLIGHT,
+                }
+                and self.expected_preflight is None
+            ):
+                raise ValueError("P1 reviewer demo packages require preflight expectations")
 
         if self.renderer is not None and (self.artwork is None or not self.artifacts):
             raise ValueError("rendered cases require artwork parameters and hashed artifacts")

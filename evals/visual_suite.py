@@ -403,7 +403,14 @@ def write_manifest(path: Path, manifest: EvaluationManifestV2 | None = None) -> 
         selected.model_dump_json(
             indent=2,
             exclude={
-                "cases": {"__all__": {"batch_package", "expected_preflight", "expected_lifecycle"}}
+                "cases": {
+                    "__all__": {
+                        "batch_package",
+                        "expected_preflight",
+                        "expected_lifecycle",
+                        "reviewer_demo",
+                    }
+                }
             },
         )
         + "\n",
