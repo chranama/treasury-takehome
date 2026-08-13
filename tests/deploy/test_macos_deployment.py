@@ -155,14 +155,14 @@ def test_remote_service_checker_is_explicit_read_only_and_has_no_fallback(
     fake_ssh = tmp_path / "ssh"
     fake_ssh.write_text(
         "#!/bin/bash\n"
-        "printf '%s\\n' \"$*\" >> \"$TREASURY_TEST_CALLS\"\n"
+        'printf \'%s\\n\' "$*" >> "$TREASURY_TEST_CALLS"\n'
         "if [ \"${1:-}\" = '-G' ]; then\n"
         "  printf 'user chranama-server\\n'\n"
         "  printf 'hostname example.invalid\\n'\n"
         "  printf 'hostkeyalias trusted-origin\\n'\n"
         "  exit 0\n"
         "fi\n"
-        "exit \"${TREASURY_TEST_SSH_EXIT:-0}\"\n",
+        'exit "${TREASURY_TEST_SSH_EXIT:-0}"\n',
         encoding="utf-8",
     )
     fake_ssh.chmod(0o700)
