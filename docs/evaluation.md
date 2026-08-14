@@ -2,8 +2,6 @@
 
 **Status:** Local fixture program and deployed P0/P1 evaluation complete
 
-**Last updated:** 2026-08-13
-
 ## Evidence layers
 
 The evaluation strategy separates deterministic application behavior from model behavior and from
@@ -35,7 +33,7 @@ The authoritative v2 schema is [`evals.manifest.EvaluationManifestV2`](../evals/
 Manifests record stable IDs, ownership, evaluation layers, source parameters, expected results, and
 artifact SHA-256 values. The accepted v1 manifest remains byte-identical for historical attribution.
 
-The F1 renderer uses deterministic source parameters and a recorded embedded-font identity. It
+The fixture renderer uses deterministic source parameters and a recorded embedded-font identity. It
 generates metadata-free PNGs and rejects a hash mismatch. Ambiguity uses explicit multiple strings;
 degradation runs in a fixed order so blur, glare, obstruction, rotation, and crop remain attributable.
 
@@ -46,9 +44,9 @@ are therefore committed under `frontend/public/demo`.
 
 ## Automated gate
 
-At F4 completion, the complete local gate contains:
+The current release gate contains:
 
-- 418 backend tests;
+- 428 backend tests;
 - 21 frontend component tests; and
 - 9 Chromium browser tests.
 
@@ -99,7 +97,7 @@ duration was 2.59 seconds at the median and 4.32 seconds at the maximum. The com
 fixture preparation, upload, and response handling.
 
 An earlier matching request took 9.61 seconds against an already healthy process and remains an
-observed provider-path outlier rather than being labeled a cold start. Across 21 scripted D3 public
+observed provider-path outlier rather than being labeled a cold start. Across 21 scripted public P0
 attempts, every provider attempt succeeded without retry and estimated aggregate cost was $0.009145.
 Two rapid additional submissions were rejected by the source throttle before provider access.
 
@@ -118,7 +116,7 @@ and refresh recovery passed without an extra job or provider attempt.
 An additional 25-case synthetic matching batch completed 25/25 cases with no failure or retry. It
 took 41.71 seconds end to end under the global two-request concurrency ceiling; median case duration
 was 2.41 seconds and the maximum was 6.99 seconds. The export contained 25 rows. Across the P0
-regression and both P1 batches, all 29 D5 provider attempts succeeded and cost an estimated
+regression and both deployed P1 batches, all 29 provider attempts succeeded and cost an estimated
 $0.012355 under the recorded pricing snapshot.
 
 All 28 processed batch images were deleted immediately. A controlled service restart kept the

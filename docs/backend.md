@@ -2,8 +2,6 @@
 
 **Status:** P0 and P1 implemented
 
-**Last updated:** 2026-08-12
-
 ## Responsibilities
 
 The Python backend serves the compiled interface, validates uploads, coordinates extraction,

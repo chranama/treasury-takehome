@@ -2,8 +2,6 @@
 
 **Status:** P0 and P1 contracts implemented
 
-**Last updated:** 2026-08-12
-
 ## Conventions
 
 The API is an application boundary for the same-origin browser, not a general public integration

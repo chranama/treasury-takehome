@@ -2,8 +2,6 @@
 
 **Status:** P0 and P1 public and validated
 
-**Last updated:** 2026-08-13
-
 ## Runtime topology
 
 The public prototype is available at
@@ -124,11 +122,12 @@ The application repository remains self-contained for build, deployment, applica
 health, and forward-fix recovery. The neutral repository is optional context for shared-host
 operations.
 
-## P1 rollout evidence
+## Initial P1 rollout evidence
 
-P1 was deployed from clean commit `15f0a5e343f50cf1dde985d412603dc3860adc43` on August 13,
-2026. The rollout disabled paid starts during activation, applied the additive schema-2 migration,
-verified P0 first, and ran mixed preflight without a provider call before re-enabling extraction.
+The first P1-capable release was deployed from clean commit
+`15f0a5e343f50cf1dde985d412603dc3860adc43` on August 13, 2026. That rollout disabled paid starts
+during activation, applied the additive schema-2 migration, verified P0 first, and ran mixed
+preflight without a provider call before re-enabling extraction.
 Because the earlier P0 binary does not own P1 cleanup correctly after migration, this remains a
 forward-only transition: a defect requires a tested forward fix rather than restarting that binary
 against schema 2.

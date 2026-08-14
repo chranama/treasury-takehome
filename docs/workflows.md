@@ -2,8 +2,6 @@
 
 **Status:** P0 and bounded P1 implemented
 
-**Last updated:** 2026-08-12
-
 ## Single-label review
 
 ```mermaid

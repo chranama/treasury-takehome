@@ -2,8 +2,6 @@
 
 **Status:** P0 and P1 implemented
 
-**Last updated:** 2026-08-12
-
 ## Application shape
 
 The interface is a React and TypeScript application built with Vite. It has two same-origin pages:

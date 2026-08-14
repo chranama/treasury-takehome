@@ -1,6 +1,8 @@
 # macOS Deployment Assets
 
-These assets deploy the label-review prototype as one native Uvicorn process on the existing Intel MacBook Air. They contain no credentials or private usage limits. The internal deployment plan owns the complete rollout and evidence gates; this directory supplies the repeatable mechanics.
+These assets deploy the label-review prototype as one native Uvicorn process on the existing Intel
+MacBook Air. They contain no credentials or private usage limits. This runbook documents the
+repeatable release, verification, recovery, and operational boundaries.
 
 ## Fixed deployment contract
 
@@ -23,8 +25,8 @@ The application root contains immutable `releases/<full-commit>` directories and
 ## Files
 
 - `preflight-host.sh` repeats the safe, read-only host checks.
-- `activate-cloudflare-route.sh` is a fail-closed compatibility notice retained for the historical
-  D3 rollout. Reusable shared-ingress source is now owned by
+- `activate-cloudflare-route.sh` is a fail-closed compatibility notice retained from the initial
+  route activation. Reusable shared-ingress source is now owned by
   [`chranama/web-server-infrastructure`](https://github.com/chranama/web-server-infrastructure),
   and the server uses an explicitly promoted copy in its protected infrastructure runtime.
 - `build-release.sh` validates a clean `main`, runs non-network checks, builds the frontend, and creates a commit-attributed archive and SHA-256 file.
@@ -139,8 +141,8 @@ removes a newly installed plist if launchd loading fails:
 sudo /Users/chranama-server/treasury-takehome/current/deploy/macos/install-service.sh
 ```
 
-This is a one-time D1 action. Release upgrades change `current` and restart the already installed
-service separately; they do not rerun the installer.
+This is a one-time service-install action. Release upgrades change `current` and restart the
+already installed service separately; they do not rerun the installer.
 
 After activating a release or changing protected configuration, first confirm that no review is
 active and then use the account-owned restart path:
@@ -218,7 +220,7 @@ The host runs its named tunnel through the system service `dev.mealcheck.tunnel`
   service: http://127.0.0.1:8081
 ```
 
-The historical D3 activation kept the existing `api.mealcheck.dev` service value unchanged, made a
+The initial route activation kept the existing `api.mealcheck.dev` service value unchanged, made a
 protected backup, validated both ingress rules, and replaced the user-owned tunnel process through
 launchd. That application helper is now retired rather than maintained as a second control plane.
 Future validation, activation, restart, and rollback use the neutral host-infrastructure runbook;

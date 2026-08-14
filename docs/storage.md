@@ -2,8 +2,6 @@
 
 **Status:** Schema version 2 implemented
 
-**Last updated:** 2026-08-12
-
 ## Data classes
 
 The application separates short-lived review content from content-free operational accounting.

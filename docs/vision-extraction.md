@@ -2,8 +2,6 @@
 
 **Status:** Hosted extraction implemented and evaluated
 
-**Last updated:** 2026-08-12
-
 ## Boundary
 
 The vision-language model reports visible evidence; it does not decide whether a label matches an

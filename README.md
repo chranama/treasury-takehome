@@ -1,12 +1,37 @@
 # Alcohol Label Verification Prototype
 
-A standalone proof of concept that helps an alcohol-label reviewer compare expected application information with visible label artwork. The application is intended to reduce routine matching work while leaving ambiguous and regulatory decisions to a human reviewer.
+A standalone proof of concept that helps an alcohol-label reviewer compare expected application
+information with visible label artwork. The application is intended to reduce routine matching
+work while leaving ambiguous and regulatory decisions to a human reviewer.
+
+## Deployed application
+
+**URL:** [https://label-review.mealcheck.dev](https://label-review.mealcheck.dev)
+
+The HTTPS deployment provides the working browser-based prototype without requiring local
+installation or access to this repository.
+
+## Approach, tools, and assumptions
+
+A hosted vision model reports structured observations from a validated label image; it never sees
+the expected application values or decides whether the label matches. Python comparison code owns
+normalization, the five checks, and the overall outcome, with uncertainty returned to the reviewer.
+
+The backend uses Python 3.12, FastAPI, Pydantic, Pillow, SQLite, and the OpenAI Responses API. The
+frontend uses React, TypeScript, and Vite. Both workflows share the same image, extraction,
+comparison, accounting, and cleanup pipeline.
+
+The prototype assumes manual expected-value entry, one image or composite per case, and synthetic
+or otherwise non-sensitive data. It does not integrate with COLAs Online or provide authentication,
+official approval decisions, or production-scale batch processing.
 
 ## Project status
 
-The P0 single-review workflow is implemented end to end with both a deterministic development adapter and a hosted OpenAI extraction adapter. Durable usage reservations, concurrency controls, idempotency, private cost limits, and explicit live-evaluation harnesses are implemented. The P0 application is deployed publicly, and its public smoke, browser-origin, performance, privacy, service-restart, and host-reboot recovery gates have passed.
-
-The P1 batch workflow is implemented and deployed at `/batch`. It includes templates, bounded spreadsheet preflight, recoverable 24-hour drafts, an accessible correction interface, idempotent background processing, bounded progress polling, outcome filters, reusable P0 case detail, refresh recovery, safe terminal CSV export, periodic orphan cleanup, and restart reconciliation. Public preflight, correction, a mixed three-case live batch, a 25-case synthetic batch, processed-image deletion, and restart recovery have passed.
+The single-label workflow (P0) and bounded batch workflow (P1) are implemented and deployed. P1 is
+available at `/batch` and accepts at most 25 cases through spreadsheet preflight, correction,
+explicit start, independent processing, results, and CSV export. The release has passed local and
+public functional, evaluation, privacy, restart, and recovery gates; detailed evidence is in
+[Evaluation](docs/evaluation.md) and [Deployment](docs/deployment.md).
 
 ## Demo workflow
 
@@ -18,15 +43,13 @@ The core workflow allows a reviewer to:
 4. check the mandatory Government Health Warning; and
 5. identify matches, discrepancies, and cases requiring human review.
 
-A bounded batch workflow at `/batch` can preflight and start as many as 25 ready applications while applying the same review independently to each selected case.
+A bounded batch workflow at `/batch` can preflight and start as many as 25 ready applications while
+applying the same review independently to each selected case.
 
-P1 is a bounded prototype workflow, not a production batch-processing system. It does not provide authentication, reviewer roles, audit history, durable cross-process queue resume, official COLAs Online integration, automatic approval or rejection, or demonstrated throughput for 200-300-application stakeholder batches.
-
-## Deployed application
-
-**URL:** [https://label-review.mealcheck.dev](https://label-review.mealcheck.dev)
-
-The HTTPS deployment provides the working browser-based prototype without requiring local installation or access to this repository.
+P1 is a bounded prototype workflow, not a production batch-processing system. It does not provide
+authentication, reviewer roles, audit history, durable cross-process queue resume, official COLAs
+Online integration, automatic approval or rejection, or demonstrated throughput for
+200-300-application stakeholder batches.
 
 ## Reviewer demo files
 
@@ -90,20 +113,27 @@ Run the FastAPI backend:
 uv run uvicorn app.main:app --reload
 ```
 
-In another terminal, run the Vite development server. It proxies `/api/*`, `/healthz`, and `/readyz` to the backend:
+In another terminal, run the Vite development server. It proxies `/api/*`, `/healthz`, and
+`/readyz` to the backend:
 
 ```bash
 npm --prefix frontend run dev
 ```
 
-For a production-shaped local run, compile the frontend first and then start the backend without `--reload`:
+Open `http://localhost:5173`. The development server sends API and health requests to the backend
+at `http://127.0.0.1:8000`.
+
+For a production-shaped local run, compile the frontend first and then start the backend without
+`--reload`:
 
 ```bash
 npm --prefix frontend run build
 uv run uvicorn app.main:app
 ```
 
-The backend then serves the compiled interface and API from the same origin. `GET /healthz` checks the process; `GET /readyz` checks local configuration, SQLite, and temporary storage without making a model request.
+Open `http://127.0.0.1:8000`. The backend then serves the compiled interface and API from the same
+origin. `GET /healthz` checks the process; `GET /readyz` checks local configuration, SQLite, and
+temporary storage without making a model request.
 
 To exercise deterministic alternatives locally, stop the backend and restart it with one scenario
 at a time:
@@ -129,7 +159,8 @@ npm --prefix frontend run lint
 npm --prefix frontend run build
 ```
 
-The browser tests exercise the real frontend, multipart API, image preparation, deterministic comparison, and development adapter. Install Chromium once, then run them:
+The browser tests exercise the real frontend, multipart API, image preparation, deterministic
+comparison, and development adapter. Install Chromium once, then run them:
 
 ```bash
 npm --prefix frontend exec -- playwright install chromium
@@ -151,7 +182,8 @@ This writes the reproducible CSV, XLSX, and image inputs described by
 
 ## Explicit P0 live evaluation
 
-The P0 live evaluation is a separate, deliberately billable command. Configure `.env` with an OpenAI API key, then acknowledge the paid run and choose an evidence-file destination:
+The P0 live evaluation is a separate, deliberately billable command. Configure `.env` with an
+OpenAI API key, then acknowledge the paid run and choose an evidence-file destination:
 
 ```bash
 uv run python -m evals.live \
@@ -159,9 +191,13 @@ uv run python -m evals.live \
   --output .data/evaluations/luna-high.json
 ```
 
-The default run makes four initial model requests over versioned synthetic fixtures, with at most one narrowly bounded retry per fixture. It records the exact configuration, fixture revision, check outcomes, uncertainty behavior, malformed-output rate, latency, provider token usage, and estimated cost. The command refuses to overwrite an existing evidence file. Use `--image-detail original` only as an explicit follow-up if warning transcription at the initial `high` setting fails.
+The default run makes four initial model requests over versioned synthetic fixtures, with at most
+one narrowly bounded retry per fixture. It records the exact configuration, fixture revision, check
+outcomes, uncertainty behavior, malformed-output rate, latency, provider token usage, and estimated
+cost. The command refuses to overwrite an existing evidence file. Use `--image-detail original`
+only as an explicit follow-up if warning transcription at the initial `high` setting fails.
 
-To run the expanded 18-case F2 visual regression instead of the frozen four-case baseline, add
+To run the expanded 18-case hosted visual regression instead of the frozen four-case baseline, add
 `--manifest fixtures/hosted-visual-v2.json`. This remains an explicitly paid evaluation; ordinary
 tests cover the same rendering and gate logic with fixed responses and no provider access.
 
