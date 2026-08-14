@@ -122,6 +122,7 @@ class NoCostFakeAttemptGate:
         self.max_concurrency = max_concurrency
         self._active_submissions = 0
         self._slot_condition = asyncio.Condition()
+        self._idempotency_hashes: set[bytes] = set()
 
     async def admit_source(self, source_identity: str) -> None:
         del source_identity
@@ -134,9 +135,10 @@ class NoCostFakeAttemptGate:
         idempotency_key: str,
         source_identity: str,
     ) -> AsyncGenerator[AttemptSubmission, None]:
-        del correlation_id, idempotency_key
+        del correlation_id
         await self.admit_source(source_identity)
         async with self._slot(wait=False):
+            self._register_idempotency_key(idempotency_key)
             yield _NoCostSubmission()
 
     @asynccontextmanager
@@ -146,9 +148,16 @@ class NoCostFakeAttemptGate:
         correlation_id: str,
         idempotency_key: str,
     ) -> AsyncGenerator[AttemptSubmission, None]:
-        del correlation_id, idempotency_key
+        del correlation_id
         async with self._slot(wait=True):
+            self._register_idempotency_key(idempotency_key)
             yield _NoCostSubmission()
+
+    def _register_idempotency_key(self, idempotency_key: str) -> None:
+        digest = hashlib.sha256(idempotency_key.encode("utf-8")).digest()
+        if digest in self._idempotency_hashes:
+            raise AttemptRejected(AttemptRejectionKind.DUPLICATE_SUBMISSION)
+        self._idempotency_hashes.add(digest)
 
     @asynccontextmanager
     async def _slot(self, *, wait: bool) -> AsyncGenerator[None, None]:

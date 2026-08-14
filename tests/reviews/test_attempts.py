@@ -11,6 +11,7 @@ from app.reviews import (
     AttemptRejected,
     AttemptRejectionKind,
     AttemptSuccess,
+    NoCostFakeAttemptGate,
     SQLiteUsageGate,
 )
 
@@ -50,6 +51,57 @@ def success() -> AttemptSuccess:
         total_tokens=3260,
         estimated_cost_usd=Decimal("0.00036034"),
     )
+
+
+def test_fake_gate_enforces_hashed_process_lifetime_idempotency() -> None:
+    gate = NoCostFakeAttemptGate()
+    first_key = "fake-submission-secret-key"
+
+    async def run() -> None:
+        async with gate.submission(
+            correlation_id="first",
+            idempotency_key=first_key,
+            source_identity="source-a",
+        ):
+            pass
+        async with gate.submission(
+            correlation_id="distinct",
+            idempotency_key="different-submission-key",
+            source_identity="source-a",
+        ):
+            pass
+        with pytest.raises(AttemptRejected) as captured:
+            async with gate.submission(
+                correlation_id="duplicate",
+                idempotency_key=first_key,
+                source_identity="source-a",
+            ):
+                pass
+        assert captured.value.kind == AttemptRejectionKind.DUPLICATE_SUBMISSION
+
+    asyncio.run(run())
+
+    assert first_key not in repr(gate.__dict__)
+
+
+def test_fake_gate_enforces_internal_submission_idempotency() -> None:
+    gate = NoCostFakeAttemptGate()
+
+    async def run() -> None:
+        async with gate.internal_submission(
+            correlation_id="first-case",
+            idempotency_key="same-case-key",
+        ):
+            pass
+        with pytest.raises(AttemptRejected) as captured:
+            async with gate.internal_submission(
+                correlation_id="duplicate-case",
+                idempotency_key="same-case-key",
+            ):
+                pass
+        assert captured.value.kind == AttemptRejectionKind.DUPLICATE_SUBMISSION
+
+    asyncio.run(run())
 
 
 def test_successful_attempt_records_only_bounded_operational_metadata(tmp_path: Path) -> None:

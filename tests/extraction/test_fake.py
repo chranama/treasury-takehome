@@ -39,7 +39,7 @@ def prepared_image(tmp_path: Path) -> PreparedImage:
 @pytest.fixture
 def expected_review() -> ExpectedReview:
     return ExpectedReview(
-        brand_name="Treasury Reserve",
+        brand_name="OLD TOM",
         class_type="Kentucky Straight Bourbon Whiskey",
         abv=Decimal("45"),
         net_contents=ExpectedNetContents(
@@ -176,7 +176,7 @@ def test_fake_adapter_returns_fresh_observations(
 
     second = extract(FakeExtractionScenario.CLEAR_MATCHING_LABEL, prepared_image)
 
-    assert second.brand_name.candidates[0].text == "Treasury Reserve"
+    assert second.brand_name.candidates[0].text == "OLD TOM"
 
 
 @pytest.mark.parametrize(

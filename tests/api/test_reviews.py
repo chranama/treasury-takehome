@@ -59,7 +59,7 @@ def png_bytes() -> bytes:
 
 def review_form(**overrides: str) -> dict[str, str]:
     values = {
-        "brand_name": "Treasury Reserve",
+        "brand_name": "OLD TOM",
         "class_type": "Kentucky Straight Bourbon Whiskey",
         "expected_abv": "45",
         "expected_net_contents": "750",
@@ -392,6 +392,31 @@ def test_idempotency_key_is_required_before_extraction(tmp_path: Path) -> None:
     assert adapter.calls == 0
 
 
+def test_fake_duplicate_idempotency_key_never_extracts_twice(tmp_path: Path) -> None:
+    adapter = RecordingAdapter()
+    app = create_app(make_settings(tmp_path), extraction_adapter=adapter)
+    idempotency_key = "550e8400-e29b-41d4-a716-446655440000"
+
+    with TestClient(app) as client:
+        first = post_review(
+            client,
+            data=review_form(),
+            files=[image_file()],
+            idempotency_key=idempotency_key,
+        )
+        duplicate = post_review(
+            client,
+            data=review_form(),
+            files=[image_file()],
+            idempotency_key=idempotency_key,
+        )
+
+    assert first.status_code == 200
+    assert duplicate.status_code == 409
+    assert_error_contract(duplicate, "duplicate_submission")
+    assert adapter.calls == 1
+
+
 def test_invalid_image_is_rejected_before_attempt_reservation(tmp_path: Path) -> None:
     adapter = RecordingAdapter()
     gate = RecordingGate()
@@ -688,7 +713,7 @@ def test_live_duplicate_idempotency_key_never_creates_second_provider_attempt(
         assert connection.execute("SELECT COUNT(*) FROM provider_attempts").fetchone() == (1,)
     database_bytes = settings.database_path.read_bytes()
     assert idempotency_key.encode("ascii") not in database_bytes
-    assert b"Treasury Reserve" not in database_bytes
+    assert b"OLD TOM" not in database_bytes
     assert b"GOVERNMENT WARNING" not in database_bytes
 
 

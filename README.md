@@ -61,6 +61,12 @@ All files are synthetic and contain no applicant data. Their source revisions, e
 and SHA-256 hashes are recorded in `fixtures/reviewer-demo-v1.json`; regenerate them with
 `uv run python -m evals.demo_bundle`.
 
+The image-specific outcomes above describe the deployed hosted-extraction path. The default local
+configuration uses the non-network `clear_matching_label` fake scenario: it returns fixed `OLD TOM`
+observations and deliberately does not inspect the uploaded pixels. This makes local setup and UI
+testing reproducible without an API key, but changing from the matching image to another demo image
+does not change fake observations by itself.
+
 ## Local setup and run instructions
 
 Prerequisites:
@@ -98,6 +104,17 @@ uv run uvicorn app.main:app
 ```
 
 The backend then serves the compiled interface and API from the same origin. `GET /healthz` checks the process; `GET /readyz` checks local configuration, SQLite, and temporary storage without making a model request.
+
+To exercise deterministic alternatives locally, stop the backend and restart it with one scenario
+at a time:
+
+```bash
+TREASURY_FAKE_EXTRACTION_SCENARIO=mismatched_net_contents uv run uvicorn app.main:app
+TREASURY_FAKE_EXTRACTION_SCENARIO=unreadable_image uv run uvicorn app.main:app
+```
+
+Use the same expected values shown above. These scenarios test mismatch and uncertainty handling;
+they remain fixed observations rather than image extraction.
 
 ## Tests
 

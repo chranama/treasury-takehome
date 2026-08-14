@@ -75,7 +75,7 @@ def _valid_rows(count: int) -> tuple[tuple[str, ...], ...]:
         (
             f"APP-{index:02d}",
             f"label-{index:02d}.png",
-            "Treasury Reserve",
+            "OLD TOM",
             "Kentucky Straight Bourbon Whiskey",
             "45%",
             "0.75 L",

@@ -6,7 +6,7 @@ const pngPixel = Buffer.from(
 )
 
 async function submitReview(page: Page) {
-  await page.getByLabel('Expected brand name').fill('Treasury Reserve')
+  await page.getByLabel('Expected brand name').fill('OLD TOM')
   await page.getByLabel('Expected class or type').fill('Kentucky Straight Bourbon Whiskey')
   await page.getByLabel('Expected alcohol by volume').fill('45')
   await page.getByLabel('Expected net contents').fill('750')

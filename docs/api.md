@@ -52,6 +52,9 @@ have fixed attachment filenames; CSV results also set `X-Content-Type-Options: n
 The success response contains the overall outcome, exactly five check results, processing duration,
 correlation ID, and `synthetic` or `live` processing mode. A repeated idempotency key returns a safe
 conflict rather than replaying content that the application deliberately does not retain.
+The deployed live gate stores only a durable SHA-256 digest of the key. The non-production fake gate
+stores only an in-memory digest and therefore enforces the same conflict contract for the lifetime
+of that local process; restarting fake mode resets its development-only registry.
 
 ## Batch preflight and correction
 

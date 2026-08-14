@@ -64,7 +64,7 @@ def _warning() -> WarningObservation:
 
 def _baseline() -> ExtractionObservations:
     return ExtractionObservations(
-        brand_name=_field("Treasury Reserve"),
+        brand_name=_field("OLD TOM"),
         class_type=_field("Kentucky Straight Bourbon Whiskey"),
         alcohol_content=_field("45% Alc./Vol."),
         net_contents=_field("750 mL"),
@@ -135,7 +135,7 @@ def _uncertain_warning_style() -> ExtractionObservations:
 
 def _ambiguous_candidates() -> ExtractionObservations:
     observations = _baseline()
-    observations.brand_name = _field("Treasury Reserve", "Treasury Select")
+    observations.brand_name = _field("OLD TOM", "OLD TOM RESERVE")
     return observations
 
 

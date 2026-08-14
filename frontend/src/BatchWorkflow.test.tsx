@@ -171,8 +171,10 @@ describe('BatchWorkflow', () => {
     )
     expect(screen.getByText(/up to 25 application rows and 25 images/i)).toBeInTheDocument()
     expect(screen.getByLabelText('Spreadsheet')).not.toBe(screen.getByLabelText('Label images'))
+    expect(screen.getByText('Selected package:')).toHaveTextContent('Selected package: 0 KB')
 
     selectPackage()
+    expect(screen.getByText('Selected package:')).toHaveTextContent('Selected package: 1 KB')
     fireEvent.click(screen.getByRole('button', { name: 'Check batch' }))
 
     expect(await screen.findByRole('heading', { name: 'Review preflight results' })).toBeInTheDocument()
